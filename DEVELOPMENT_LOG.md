@@ -1141,3 +1141,72 @@ Cross-references checked: the only remaining mentions of the moved files are
 inside `.project/` itself, plus two comments in `test_repro.py` citing "WORK
 BRIEF 2.2" as the origin of the seven specification rows, which is still an
 accurate historical reference.
+
+---
+
+## Item 9. Tailwind Capital Partners III — solved. It is a secondary sale.
+
+Not a matching error, and not ambiguous. Both plans hold the same fund; Oregon
+sold its position and CalPERS did not.
+
+| | CalPERS | Oregon |
+|---|---|---|
+| name | Tailwind Capital Partners III, L.P. | Tailwind Capital Partners III |
+| commitment | $200.0m | $200.0m |
+| contributions | $224.0m | $156.8m |
+| distributions | $120.2m | $157.7m |
+| **NAV** | **$258.9m** | **$0.0m** |
+| TVPI | 1.693 | 1.006 |
+| net IRR | 17.4% | 0.4% |
+| **sold in secondary** | not published | **yes** |
+| vintage | 2018 | 2017 |
+
+Identical $200m commitments and the same fund name settle identity; the
+one-year vintage gap is the familiar CalPERS +1 pattern from item 4. Oregon's
+NAV is *exactly* zero and its `sold_secondary` flag is set. So Oregon's 1.006
+is the price it got in a secondary sale, and CalPERS' 1.693 is a live carrying
+mark on a position still held. **The 68% gap is the secondary discount, not
+reporting noise.**
+
+### This generalises, and it is the better fix
+
+7 of the 43 aligned pairs are Oregon secondary sales. Every one has NAV of
+exactly zero. The separation is stark:
+
+| | pairs | median disagreement |
+|---|---|---|
+| both plans still holding | 36 | **0.82%** |
+| Oregon sold in secondary | 7 | **9.94%** |
+
+Twelve times larger. So `run_overlap.py` now excludes secondary sales as a
+**principled rule**, not as outlier trimming — a realised transaction price and
+a live NAV mark are not two measurements of one quantity, and Oregon's own
+footnote says exactly that. Only Oregon publishes the flag; CalPERS lists
+active partnerships only, so a fund it had sold would be absent from its table
+rather than present and mismarked.
+
+### Effect
+
+| | before | after |
+|---|---|---|
+| comparable pairs | 43 | 36 |
+| cross-plan correlation | 0.944 | 0.986 |
+| median disagreement | 1.41% | 0.82% |
+| largest disagreement | 68.3% (Tailwind III) | 13.2% (KKR European III) |
+| **λ** | 0.944 | **0.986**, CI [0.963, 0.995] |
+| correction | 1.06× | **1.014×** |
+
+β 0.214 → 0.217. The vintage-agreeing subset gives λ = 0.988 independently.
+
+**This supersedes the ad-hoc sensitivity from item 7(b).** I no longer need a
+"drop the single largest gap" rule — that was a symptom-level patch for a
+problem with a principled cause. The three routes (exclude secondary sales,
+drop largest gap, keep vintage-agreeing pairs) all land near 0.98, which is
+reassuring, but only the first has a reason behind it. RESULTS.md and the
+README now state the exclusion and why.
+
+This also retires the run's largest flagged uncertainty: Tailwind was listed in
+the previous morning summary as the lowest-confidence item and the thing
+driving the headline attenuation figure. Both are now resolved.
+
+Tests: 221 → 224.

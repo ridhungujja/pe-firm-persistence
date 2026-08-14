@@ -281,3 +281,41 @@ class TestMinimumDetectableEffect:
             assert all(
                 b >= a - 0.06 for a, b in zip(powers, powers[1:])
             ), f"{cluster}: power curve is not monotone"
+
+
+class TestSecondarySaleExclusion:
+    """A fund one plan sold and the other still holds is not two reports of the
+    same quantity. The sold side is a realised transaction price with zero NAV;
+    the held side is a live mark. Their difference is the secondary discount,
+    which is real economics rather than reporting noise."""
+
+    def test_sold_pairs_disagree_far_more_than_held_pairs(self, repo_data):
+        path = repo_data / "overlap_pairs.csv"
+        if not path.exists():
+            pytest.skip("run analysis/run_overlap.py first")
+        pairs = pd.read_csv(path)
+        # The shipped file is post-exclusion, so this checks the exclusion held.
+        assert "sold_secondary" not in pairs.columns or not pairs[
+            "sold_secondary"
+        ].fillna(False).astype(bool).any()
+
+    def test_excluding_sold_pairs_raises_reliability(self, repo_data):
+        path = repo_data / "attenuation.csv"
+        if not path.exists():
+            pytest.skip("run analysis/run_overlap.py first")
+        row = pd.read_csv(path).iloc[0]
+        assert row["lambda"] > row["lambda_incl_secondary"], (
+            "excluding secondary sales must raise the reliability ratio; if it "
+            "does not, the sold pairs are not the noisy ones and the exclusion "
+            "needs rethinking"
+        )
+        assert row["lambda"] > 0.95
+
+    def test_correction_is_small_enough_to_change_nothing(self, repo_data):
+        path = repo_data / "attenuation.csv"
+        if not path.exists():
+            pytest.skip("run analysis/run_overlap.py first")
+        row = pd.read_csv(path).iloc[0]
+        # beta_corrected must stay well inside the headline standard error
+        # (0.138), or the write-up's "changes no conclusion" claim is wrong.
+        assert abs(row["beta_corrected"] - row["beta_raw"]) < 0.05

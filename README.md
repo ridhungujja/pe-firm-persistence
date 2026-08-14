@@ -32,7 +32,8 @@ is the methodological content.
 
 **The data.** CalPERS (462 funds, HTML) and Oregon PERS (18 quarterly PDFs back
 to 2021, parsed with pdfplumber). Both are public-disclosure tables, the free
-substitute for Preqin. 43 funds appear in both at the same reporting date,
+substitute for Preqin. 43 funds appear in both at the same reporting date —
+36 of them comparable, the rest sold by Oregon in the secondary market —
 which gives a direct read on cross-plan reporting noise.
 
 **What the design could detect.** Power analysis on the actual sample puts the
@@ -229,10 +230,10 @@ Ordered by how much they should worry you. Direction of bias where known.
 - **Unrealised marks.** Most funds are 2020s vintages carrying GP valuations
   rather than realisations. Interim NAVs are stale and smoothed, which
   **attenuates β toward zero**. The cross-plan overlap bounds only the part
-  that differs between two LPs of the same fund (λ = 0.98, a 1.02×
+  that differs between two LPs of the same fund (λ = 0.986, a 1.014×
   correction); the stale-marks component is common to both reports and cancels
   in the difference, so true attenuation is larger by an unknown amount. Note
-  the cross-plan *correlation* (0.944) and the *reliability ratio* (λ = 0.98)
+  the cross-plan *correlation* and the *reliability ratio* (λ = 0.986)
   are different quantities — they coincide only under assumptions that the
   shared GP valuation violates.
 - **The vintage label carries error.** 18 of 43 cross-plan matches disagree on

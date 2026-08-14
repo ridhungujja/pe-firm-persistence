@@ -184,6 +184,25 @@ def main() -> None:
     print(f"  as a share of the smaller plan:        "
           f"{len(merged) / min(len(cal), len(ore)):.1%}")
 
+    # Funds Oregon sold in the secondary market are excluded. This is not
+    # outlier trimming: a sold position's reported multiple is a realised
+    # transaction price and its NAV is zero, while CalPERS still carries the
+    # same fund at a live mark. The difference between them is the secondary
+    # discount, which is a real economic quantity and not reporting noise, so
+    # including these pairs measures the wrong thing. Oregon's own footnote
+    # makes the point: performance for a fund sold in the secondary market "is
+    # not representative of the performance of that fund if it were held until
+    # its natural liquidation".
+    #
+    # Only Oregon publishes the flag. CalPERS lists active partnerships only,
+    # so a fund it had sold would be absent from the table entirely rather
+    # than present and mismarked.
+    all_pairs = merged
+    sold = merged["sold_secondary"].fillna(False).astype(bool)
+    merged = merged[~sold]
+    print(f"  Oregon sold in the secondary market:   {int(sold.sum())} (excluded)")
+    print(f"  comparable pairs:                      {len(merged)}")
+
     if len(merged) < 10:
         raise SystemExit(
             f"only {len(merged)} aligned pairs; too few to estimate a variance. "
@@ -229,15 +248,15 @@ def main() -> None:
     print(f"  reliability lambda     {result['lambda']:.4f}  "
           f"95% CI [{lo:.4f}, {hi:.4f}]")
 
-    # One pair in 43 can dominate a variance, so report the estimate without
-    # the single largest disagreement as well. Shown, not substituted: the
-    # outlier is a real pair of reports and dropping it silently would be
-    # choosing the answer.
-    order = np.argsort(np.abs(log_cal - log_ore))[:-1]
-    trimmed = attenuation(log_cal[order], log_ore[order])
-    print(f"  lambda excluding the single largest gap   {trimmed['lambda']:.4f} "
-          f"(n = {trimmed['n_pairs']})")
-    result["lambda_ex_max"] = trimmed["lambda"]
+    # Sensitivity: put the secondary sales back in. Reported so the exclusion
+    # is visible rather than silent.
+    with_sold = attenuation(
+        np.log(all_pairs["tvpi_reported_cal"].to_numpy()),
+        np.log(all_pairs["tvpi_reported_ore"].to_numpy()),
+    )
+    print(f"  lambda including secondary sales          {with_sold['lambda']:.4f} "
+          f"(n = {with_sold['n_pairs']})")
+    result["lambda_incl_secondary"] = with_sold["lambda"]
 
     vintage_agree = (merged["vintage_cal"] == merged["vintage_ore"]).to_numpy()
     if vintage_agree.sum() >= 10:

@@ -139,14 +139,22 @@ correlation above the true reliability. So the correlation is reported as a
 description and λ is estimated separately from the variance of the paired
 differences, rather than read off the correlation.
 
-Estimated that way, **λ = 0.98**, correcting β from 0.214 to 0.219 — a 1.02×
-adjustment. That figure excludes a single pair, Tailwind Capital Partners III,
-where the two plans disagree by 68%; including it drops λ to 0.944 and the
-correction to 1.06×. The full-sample figure is reported as the sensitivity
-rather than the headline because one observation in 43 should not set a
-variance estimate, and because that observation is unexplained (see
-DEVELOPMENT_LOG). Restricting instead to the 25 pairs where the plans agree on
-vintage gives λ = 0.980, which is the same answer by a different route.
+Estimated that way on the 36 comparable pairs, **λ = 0.986** (95% CI
+[0.963, 0.995]), correcting β from 0.214 to 0.217 — a 1.014× adjustment.
+
+The seven remaining pairs are funds Oregon **sold in the secondary market**,
+and they are excluded on principle rather than trimmed as outliers. A sold
+position's reported multiple is a realised transaction price with NAV of
+exactly zero, while CalPERS still carries the same fund at a live mark; the
+gap between them is the secondary discount, which is real economics and not
+reporting noise. Oregon says as much in its own footnote — such performance
+"is not representative of the performance of that fund if it were held until
+its natural liquidation". The separation is stark: median disagreement is
+0.82% among held pairs and 9.94% among sold ones, twelve times larger.
+Including them drops λ to 0.944.
+
+Restricting instead to the 22 pairs where the plans also agree on vintage
+gives λ = 0.988, the same answer by an independent route.
 
 ## What this design could have detected
 
