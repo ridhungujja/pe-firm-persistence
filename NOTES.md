@@ -199,3 +199,71 @@ that large vintage effects alone do not register as persistence.
   from the processed snapshot.
 
 Tests: 156 → 165.
+
+---
+
+## 4. Additional robustness — done
+
+Appended to the specification table (`data/robustness_rows.csv`, and
+`data/all_specifications.csv` combines rows 1–9). All against the headline
+sample: mature, adjacent pairs.
+
+| specification | beta | SE | 95% CI | p | p_boot | n | families |
+|---|---|---|---|---|---|---|---|
+| 8. Winsorised 1/99 | 0.214 | 0.138 | [−0.057, 0.485] | 0.122 | 0.187 | 65 | 39 |
+| 8. Winsorised 5/95 | 0.222 | 0.158 | [−0.087, 0.532] | 0.158 | 0.219 | 65 | 39 |
+| 9. Families with 3+ funds | 0.148 | 0.211 | [−0.265, 0.562] | 0.482 | 0.696 | 44 | 18 |
+
+**Winsorising barely moves it.** 0.214 → 0.214 at 1/99 and → 0.222 at 5/95, so
+the estimate is not an outlier artefact. Worth knowing given how skewed fund
+multiples are.
+
+**Restricting to families with 3+ funds nearly doubles the standard error**
+(0.138 → 0.211) and halves beta. 18 families, 44 pairs. The queue's rationale
+was that sequencing is most reliable there, and that is true, but the sample
+is too small to say anything — this row is a precision loss, not evidence
+against persistence.
+
+### Leave-one-out
+
+- **Family:** 39 refits, beta ranges **[0.138, 0.281]** around 0.214. No refit
+  produces beta ≤ 0. Largest single influence is dropping
+  `YUCAIPA CORPORATE INITIATIVES FUND`, which moves beta to 0.138 (−0.076).
+- **Vintage:** 17 refits, beta ranges **[0.118, 0.308]**. No refit produces
+  beta ≤ 0. Dropping vintage 2008 moves beta to 0.118 (−0.097) — the largest
+  single influence anywhere in the robustness set, and worth noting that it is
+  the financial-crisis vintage.
+
+Neither exercise finds a family or a year the result depends on for its sign.
+Both find that the magnitude moves by roughly half a standard error, which is
+about what 65 observations should be expected to do.
+
+**Correction made mid-task.** My first run reported 174 family refits and a
+range of [0.138, 0.281]. The range was right but the refit count was not: I
+was dropping every family in the mature panel, and only 39 of them contribute
+to the adjacent-pairs regression. The other 135 refits returned the original
+coefficient unchanged, which makes an estimate look far more robust than it is
+by burying the informative refits in no-ops. `leave_one_out` now takes a
+`levels` argument and the script passes the families actually in the
+estimation sample. Same for vintages, 23 → 17.
+
+### Spearman rank correlation within vintage
+
+rho = **+0.230**, permutation p = **0.239**, 65 pairs. Same sign and rough
+magnitude as beta, same conclusion — not distinguishable from zero. Because it
+correlates within-vintage percentile ranks it is invariant to any monotone
+transform of TVPI, so it independently rules out the linear-in-logs functional
+form as the reason the regression finds what it finds.
+
+### Buyout-only — NOT POSSIBLE
+
+Neither source publishes a strategy field. CalPERS gives fund name, vintage,
+and cash columns; Oregon adds a secondary-sale flag and a reported multiple.
+Nothing classifies a fund as buyout, venture, growth or credit.
+
+I considered classifying from fund names and rejected it: "Ares Corporate
+Opportunities" and "GSO Energy Partners" are credit vehicles whose names say
+nothing of the kind, and a keyword rule would produce a strategy column that
+looks like data and is actually a guess. Left out rather than filled in.
+
+Tests: 165 → 175.

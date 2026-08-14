@@ -14,9 +14,12 @@ import pytest
 from pefund.persistence import (
     build_panel,
     estimate,
+    leave_one_out,
     quartile_transitions,
+    spearman_within,
     transition_permutation_test,
     wild_cluster_bootstrap,
+    winsorise,
 )
 
 
@@ -385,3 +388,93 @@ class TestLevelsDependentVariable:
         metrics["net_irr"] = -0.2
         panel = build_panel(funds, metrics, "net_irr", log=False)
         assert (panel["y"] < 0).all(), "logging an IRR would drop every losing fund"
+
+
+class TestRobustnessTools:
+    def test_winsorise_uses_common_bounds_for_y_and_lag(self):
+        panel = pd.DataFrame({
+            "y":     [-9.0, 0.0, 0.1, 0.2, 9.0],
+            "y_lag": [-9.0, 0.0, 0.1, 0.2, 9.0],
+        })
+        out = winsorise(panel, 0.1, 0.9)
+        # Same variable at different k, so the same bounds must apply to both.
+        assert out["y"].min() == out["y_lag"].min()
+        assert out["y"].max() == out["y_lag"].max()
+
+    def test_winsorise_pulls_in_the_tails(self):
+        funds, metrics = make_ar_panel(n_firms=200)
+        panel = build_panel(funds, metrics)
+        out = winsorise(panel, 0.05, 0.95)
+        assert out["y"].max() < panel["y"].max()
+        assert out["y"].min() > panel["y"].min()
+
+    def test_winsorise_preserves_row_count(self):
+        funds, metrics = make_ar_panel(n_firms=50)
+        panel = build_panel(funds, metrics)
+        assert len(winsorise(panel, 0.01, 0.99)) == len(panel)
+
+    def test_leave_one_out_refits_once_per_level(self):
+        funds, metrics = make_ar_panel(n_firms=30, funds_per_firm=3)
+        panel = build_panel(funds, metrics)
+        loo = leave_one_out(panel, by="firm_id", vintage_fe=False,
+                            cluster_on=("firm_id",))
+        assert len(loo) == 30
+        assert loo["n_obs"].max() < len(panel.dropna(subset=["y", "y_lag"]))
+
+    def test_leave_one_out_levels_argument_restricts_refits(self):
+        funds, metrics = make_ar_panel(n_firms=30, funds_per_firm=3)
+        panel = build_panel(funds, metrics)
+        chosen = panel["firm_id"].unique()[:5]
+        loo = leave_one_out(panel, by="firm_id", levels=chosen, vintage_fe=False,
+                            cluster_on=("firm_id",))
+        assert len(loo) == 5
+        assert set(loo["dropped"]) == set(chosen)
+
+    def test_leave_one_out_is_stable_when_no_family_dominates(self):
+        # 400 balanced families: no single one should move beta much.
+        funds, metrics = make_ar_panel(beta=0.35, n_firms=400)
+        panel = build_panel(funds, metrics)
+        full = estimate(panel, "full", vintage_fe=False, cluster_on=("firm_id",))
+        loo = leave_one_out(panel, by="firm_id", vintage_fe=False,
+                            cluster_on=("firm_id",))
+        assert (loo["beta"] - full.beta).abs().max() < 0.05
+
+    def test_spearman_detects_monotone_dependence_that_is_not_linear(self):
+        rng = np.random.default_rng(4)
+        lag = rng.normal(size=400)
+        panel = pd.DataFrame({
+            "vintage": rng.integers(2000, 2008, size=400),
+            "y_lag": lag,
+            "y": np.exp(3 * lag),      # strongly monotone, wildly non-linear
+        })
+        result = spearman_within(panel, n_permutations=999)
+        assert result["rho"] > 0.5
+        assert result["p_value"] < 0.01
+
+    def test_spearman_does_not_reject_under_independence(self):
+        rng = np.random.default_rng(9)
+        panel = pd.DataFrame({
+            "vintage": rng.integers(2000, 2008, size=400),
+            "y_lag": rng.normal(size=400),
+            "y": rng.normal(size=400),
+        })
+        result = spearman_within(panel, n_permutations=999)
+        assert result["p_value"] > 0.05
+
+    def test_spearman_is_not_fooled_by_vintage_effects(self):
+        rng = np.random.default_rng(2)
+        vintage = rng.integers(2000, 2008, size=400)
+        panel = pd.DataFrame({
+            "vintage": vintage,
+            "y_lag": rng.normal(size=400) + vintage * 5.0,
+            "y": rng.normal(size=400) + vintage * 5.0,
+        })
+        result = spearman_within(panel, n_permutations=999)
+        assert result["p_value"] > 0.05, (
+            "ranking within vintage must remove the common vintage component"
+        )
+
+    def test_spearman_returns_nan_on_a_tiny_sample(self):
+        panel = pd.DataFrame({"vintage": [2000] * 4, "y": [1, 2, 3, 4],
+                              "y_lag": [1, 2, 3, 4]})
+        assert np.isnan(spearman_within(panel, n_permutations=99)["rho"])

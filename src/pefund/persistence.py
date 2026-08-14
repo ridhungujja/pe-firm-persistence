@@ -424,6 +424,112 @@ def wild_cluster_bootstrap(
     )
 
 
+def winsorise(panel: pd.DataFrame, lower: float, upper: float) -> pd.DataFrame:
+    """Clip y and y_lag to common percentile bounds.
+
+    Bounds are computed once over the pooled distribution of the performance
+    variable, not separately for y and y_lag. They are the same variable
+    observed at different points in a family's sequence, so clipping them to
+    different limits would distort the relationship being estimated -- a fund
+    could be an outlier as a successor and not as a predecessor.
+    """
+    pooled = pd.concat([panel["y"], panel["y_lag"]]).dropna()
+    low, high = pooled.quantile(lower), pooled.quantile(upper)
+    out = panel.copy()
+    out["y"] = out["y"].clip(low, high)
+    out["y_lag"] = out["y_lag"].clip(low, high)
+    return out
+
+
+def leave_one_out(
+    panel: pd.DataFrame,
+    by: str = "firm_id",
+    levels: pd.Series | np.ndarray | None = None,
+    **estimate_kwargs,
+) -> pd.DataFrame:
+    """Refit the specification dropping each level of `by` in turn.
+
+    At 65 observations across 39 families, a single family contributing four
+    funds is several percent of the sample. This says whether the estimate
+    survives the loss of any one of them, and names the ones it depends on --
+    a claim that rests on one manager is a different claim from one that does
+    not, and the difference is invisible in a standard error.
+
+    `levels` restricts which values are dropped. Pass the levels that actually
+    appear in the estimation sample: a specification that restricts to
+    adjacent pairs uses a fraction of the families in the panel it was handed,
+    and refitting after dropping a family that contributed nothing returns the
+    original coefficient. Those no-op refits do not make the estimate look
+    robust, they just bury the informative ones.
+    """
+    candidates = panel[by].dropna().unique() if levels is None else np.asarray(levels)
+    rows = []
+    for level in sorted(pd.unique(candidates)):
+        subset = panel[panel[by] != level]
+        try:
+            fit = estimate(subset, f"drop {level}", **estimate_kwargs)
+        except Exception:  # noqa: BLE001 - dropping a level can empty a spec
+            continue
+        rows.append(
+            {"dropped": level, "beta": fit.beta, "se": fit.se, "n_obs": fit.n_obs}
+        )
+    return pd.DataFrame(rows)
+
+
+def spearman_within(
+    panel: pd.DataFrame,
+    within: str = "vintage",
+    n_permutations: int = 9999,
+    seed: int = 20240813,
+) -> dict:
+    """Rank correlation of successor on predecessor, within vintage.
+
+    The regression assumes the relationship is linear in logs. This does not:
+    it converts both performance measures to percentile ranks inside their own
+    vintage and correlates the ranks, so it is invariant to any monotone
+    transformation of TVPI and cannot be driven by a single extreme fund.
+
+    The p-value comes from the same within-vintage shuffle as the transition
+    test rather than from the asymptotic Spearman distribution, which assumes
+    independent observations and would be wrong here for the same reason the
+    standard errors are clustered.
+    """
+    df = panel.dropna(subset=["y", "y_lag"]).copy()
+    if len(df) < 8:
+        return {"rho": np.nan, "p_value": np.nan, "n_pairs": len(df)}
+
+    def pct_rank(s: pd.Series) -> pd.Series:
+        return s.rank(pct=True)
+
+    df["r_now"] = df.groupby(within)["y"].transform(pct_rank)
+    df["r_prev"] = df.groupby(within)["y_lag"].transform(pct_rank)
+
+    observed = float(np.corrcoef(df["r_prev"], df["r_now"])[0, 1])
+
+    rng = np.random.default_rng(seed)
+    groups = [g.index.to_numpy() for _, g in df.groupby(within, sort=False)]
+    now = df["r_now"].to_numpy()
+    prev = df["r_prev"].to_numpy()
+    positions = {idx: i for i, idx in enumerate(df.index)}
+
+    null = np.empty(n_permutations)
+    for i in range(n_permutations):
+        shuffled = now.copy()
+        for group in groups:
+            slots = [positions[idx] for idx in group]
+            shuffled[slots] = rng.permutation(now[slots])
+        null[i] = np.corrcoef(prev, shuffled)[0, 1]
+
+    p_value = (1 + int((null >= observed).sum())) / (n_permutations + 1)
+    return {
+        "rho": observed,
+        "p_value": float(p_value),
+        "null_mean": float(null.mean()),
+        "null_sd": float(null.std(ddof=1)),
+        "n_pairs": len(df),
+    }
+
+
 def results_table(results: list[PersistenceResult]) -> pd.DataFrame:
     return pd.DataFrame([r.as_row() for r in results])
 

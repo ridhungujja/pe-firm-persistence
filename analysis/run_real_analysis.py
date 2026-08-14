@@ -58,6 +58,9 @@ from pefund.ingest.base import (  # noqa: E402
 from pefund.persistence import (  # noqa: E402
     build_panel,
     estimate,
+    leave_one_out,
+    spearman_within,
+    winsorise,
     quartile_transitions,
     results_table,
     transition_permutation_test,
@@ -169,6 +172,105 @@ def specification_rows(panel: pd.DataFrame, irr: pd.DataFrame) -> list[dict]:
         row["includes_zero"] = bool(ci_low <= 0 <= ci_high)
         rows.append(row)
     return rows
+
+
+def _row(data, name, **kwargs) -> dict:
+    """One specification row with analytic and bootstrap inference."""
+    fit = estimate(data, name, vintage_fe=True, cluster_on=CLUSTER, **kwargs)
+    row = fit.as_row()
+    try:
+        boot = wild_cluster_bootstrap(
+            data, name, vintage_fe=True, cluster_col=CLUSTER[0],
+            n_boot=N_BOOT, **kwargs
+        )
+        row["p_bootstrap"] = round(boot.p_bootstrap, 4)
+    except Exception:  # noqa: BLE001
+        row["p_bootstrap"] = np.nan
+    row["ci95_low"] = round(fit.beta - 1.96 * fit.se, 4)
+    row["ci95_high"] = round(fit.beta + 1.96 * fit.se, 4)
+    row["includes_zero"] = bool(row["ci95_low"] <= 0 <= row["ci95_high"])
+    return row
+
+
+def robustness_rows(panel: pd.DataFrame, mature: pd.DataFrame):
+    """Extra rows appended to the specification table, plus text diagnostics."""
+    rows, notes = [], []
+    headline = dict(max_gap=1)
+
+    for lower, upper, label in [(0.01, 0.99, "1/99"), (0.05, 0.95, "5/95")]:
+        rows.append(
+            _row(winsorise(mature, lower, upper), f"8. Winsorised {label}", **headline)
+        )
+
+    three_plus = mature.groupby("firm_id")["fund_id"].transform("size") >= 3
+    try:
+        rows.append(
+            _row(mature[three_plus], "9. Families with 3+ funds", **headline)
+        )
+    except Exception as exc:  # noqa: BLE001
+        notes.append(f"\n  Families with 3+ funds: NOT ESTIMABLE -- {exc}")
+
+    # --------------------------------------------------------- leave-one-out
+    # The rows the headline specification actually fits on.
+    sample = mature[
+        (mature["fund_number_gap"] == 1)
+        & mature["y"].notna()
+        & mature["y_lag"].notna()
+    ]
+    full = estimate(mature, "headline", vintage_fe=True, cluster_on=CLUSTER, **headline)
+
+    for by, label in [("firm_id", "family"), ("vintage", "vintage")]:
+        # Only drop levels that appear in the estimation sample. Dropping a
+        # family the headline spec never used returns the same beta, and 135
+        # such no-op refits would make the range look far tighter than it is.
+        loo = leave_one_out(
+            mature, by=by, levels=sample[by].dropna().unique(),
+            vintage_fe=True, cluster_on=CLUSTER, **headline
+        )
+        if loo.empty:
+            notes.append(f"\n  Leave-one-{label}-out: no refit succeeded")
+            continue
+        worst = loo.loc[(loo["beta"] - full.beta).abs().idxmax()]
+        notes.append(
+            f"\n  Leave-one-{label}-out ({len(loo)} refits): "
+            f"beta ranges [{loo['beta'].min():.4f}, {loo['beta'].max():.4f}] "
+            f"around {full.beta:.4f}"
+        )
+        notes.append(
+            f"    largest single influence: dropping {worst['dropped']!r} "
+            f"moves beta to {worst['beta']:.4f} "
+            f"({worst['beta'] - full.beta:+.4f})"
+        )
+        flips = int(((loo["beta"] <= 0).sum()))
+        notes.append(
+            f"    refits with beta <= 0: {flips} of {len(loo)}"
+        )
+        loo.to_csv(DATA / f"leave_one_{label}_out.csv", index=False)
+
+    # ------------------------------------------------------------- Spearman
+    spear = spearman_within(sample)
+    if np.isnan(spear["rho"]):
+        notes.append(f"\n  Spearman: not estimable, only {spear['n_pairs']} pairs")
+    else:
+        notes.append(
+            f"\n  Spearman rank correlation within vintage: "
+            f"rho = {spear['rho']:+.4f}, permutation p = {spear['p_value']:.4f} "
+            f"({spear['n_pairs']} pairs)"
+        )
+        notes.append(
+            "    Invariant to any monotone transform of TVPI, so it cannot be "
+            "driven by\n    one extreme fund or by the choice of logs."
+        )
+        pd.DataFrame([spear]).to_csv(DATA / "spearman_within.csv", index=False)
+
+    # -------------------------------------------------------- buyout-only
+    notes.append(
+        "\n  Buyout-only: NOT POSSIBLE. Neither CalPERS nor Oregon publishes a\n"
+        "    strategy field, and both tables carry only fund name, vintage and\n"
+        "    cash figures. Classifying by keywords in the fund name would be a\n"
+        "    guess presented as data, so the row is left out rather than filled."
+    )
+    return rows, notes
 
 
 def main() -> None:
@@ -300,8 +402,25 @@ def main() -> None:
                   f"null {wider.null_mean:.3f}, p = {wider.p_value:.4f}, "
                   f"n = {wider.n_pairs}")
 
+    # -------------------------------------------------------- robustness
+    header("Robustness (all against the headline sample: mature, adjacent)")
+    extra, diagnostics = robustness_rows(panel, mature)
+    extra_table = pd.DataFrame(extra)
+    extra_table.to_csv(DATA / "robustness_rows.csv", index=False)
+    show2 = [c for c in ["specification", "beta", "std_error", "ci95_low",
+                         "ci95_high", "p", "p_bootstrap", "n_funds", "n_firms"]
+             if c in extra_table.columns]
+    print(extra_table[show2].to_string(index=False))
+
+    for line in diagnostics:
+        print(line)
+
+    combined = pd.concat([table, extra_table], ignore_index=True)
+    combined.to_csv(DATA / "all_specifications.csv", index=False)
+
     print(f"\nWrote {DATA / 'real_specifications.csv'}, "
-          f"{DATA / 'mapping_robustness.csv'}")
+          f"{DATA / 'mapping_robustness.csv'}, {DATA / 'robustness_rows.csv'}, "
+          f"{DATA / 'all_specifications.csv'}")
 
 
 if __name__ == "__main__":
