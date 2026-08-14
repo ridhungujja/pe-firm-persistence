@@ -947,3 +947,53 @@ quarters, so the test that worked for Oregon cannot be run.
 something one to two years later that cannot be identified from public data.**
 That is enough for item 5 — the direction of the label error is established
 even though its exact definition is not.
+
+---
+
+## Item 5. Vintage-error bias direction — the stated reasoning is WRONG
+
+`analysis/simulate_vintage_error.py`. The queue's hypothesis was that
+mislabelled vintages leave correlated market shocks in the residual, inflating
+apparent persistence and making 0.214 an **upper** bound.
+
+**The simulation says the opposite.** Displaced labels *attenuate* beta.
+
+| true β | β with true labels | β with displaced labels | bias | share inflated |
+|---|---|---|---|---|
+| 0.00 | +0.017 | +0.016 | −0.001 (MC se 0.009) | 47.8% |
+| 0.25 | +0.264 | +0.226 | **−0.038** (se 0.008) | 39.0% |
+| 0.50 | +0.511 | +0.441 | **−0.070** (se 0.008) | 33.8% |
+
+400 replications each, panel shaped like the real sample (39 families, mostly
+two funds, four years apart), labels displaced by the observed CalPERS pattern
+— 58% unchanged, 33% at +1, 9% at +2.
+
+### Why the intuition fails
+
+The argument tracks the residual and forgets the regressor. An imperfectly
+absorbed vintage shock lands in **y_lag** as well as in y, and a noisy
+regressor attenuates — classical errors-in-variables, which dominates the
+correlated-residual channel.
+
+This is the same mechanism the project already documents for *omitting*
+vintage fixed effects entirely, where the README notes beta falls rather than
+rises. Mislabelling is a partial version of omitting, and it behaves like one.
+The two findings are consistent; the queue's hypothesis was not consistent
+with either.
+
+### Magnitude
+
+Bias is **proportional, roughly −14% of beta** (−14.4% at β=0.25, −13.7% at
+β=0.50), and essentially zero at β=0 — exactly the signature of multiplicative
+attenuation, which has nothing to act on when there is no persistence.
+
+Applied to the real estimate: 0.214 corrects to about **0.25**. That is a
+quarter of one standard error (0.138) and changes no conclusion — the interval
+still comfortably includes zero.
+
+**So β = 0.214 is a LOWER bound with respect to vintage-label error, not an
+upper bound.** RESULTS.md limitation 4 needs the direction stated this way.
+There are five tests pinning it, including one asserting the sign of the bias,
+so the write-up cannot drift back to the intuition.
+
+Tests: 212 → 217.

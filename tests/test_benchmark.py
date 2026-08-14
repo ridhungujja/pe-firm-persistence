@@ -175,3 +175,62 @@ class TestAttenuation:
         result = attenuation(*self._reports(0.3, 0.15))
         beta_raw = 0.2
         assert beta_raw / result["lambda"] > beta_raw
+
+
+class TestVintageErrorSimulation:
+    """The vintage-label error must have a validated direction, not an argued one.
+
+    The intuitive story is that unabsorbed vintage shocks correlate across a
+    family's funds and inflate apparent persistence. These tests pin down that
+    the opposite happens, so the write-up cannot drift back to the intuition.
+    """
+
+    def test_displacement_matches_the_observed_pattern(self):
+        from simulate_vintage_error import OBSERVED_SHIFTS, OBSERVED_WEIGHTS, displace
+
+        assert OBSERVED_SHIFTS == (0, 1, 2), "CalPERS is never earlier than Oregon"
+        assert sum(OBSERVED_WEIGHTS) == pytest.approx(1.0)
+        rng = np.random.default_rng(0)
+        original = pd.Series([2000] * 4000)
+        shifted = displace(original, rng)
+        # Never earlier, at most two years later.
+        assert (shifted >= original).all()
+        assert (shifted - original).max() <= 2
+        assert (shifted - original).mean() == pytest.approx(
+            sum(s * w for s, w in zip(OBSERVED_SHIFTS, OBSERVED_WEIGHTS)), abs=0.05
+        )
+
+    def test_mislabelling_attenuates_rather_than_inflates(self):
+        from simulate_vintage_error import run
+
+        result = run(n_reps=120, beta=0.35, seed=5)
+        bias = (result["beta_mislabelled"] - result["beta_true_labels"]).mean()
+        assert bias < 0, (
+            f"displaced vintage labels attenuate beta; got bias {bias:+.4f}. "
+            "If this ever turns positive the write-up's direction is wrong."
+        )
+
+    def test_no_bias_when_there_is_no_persistence_to_attenuate(self):
+        from simulate_vintage_error import run
+
+        result = run(n_reps=120, beta=0.0, seed=6)
+        bias = (result["beta_mislabelled"] - result["beta_true_labels"]).mean()
+        # Attenuation is multiplicative, so it has nothing to act on at zero.
+        assert abs(bias) < 0.03
+
+    def test_bias_scales_with_beta(self):
+        from simulate_vintage_error import run
+
+        small = run(n_reps=120, beta=0.20, seed=7)
+        large = run(n_reps=120, beta=0.50, seed=7)
+        bias_small = (small["beta_mislabelled"] - small["beta_true_labels"]).mean()
+        bias_large = (large["beta_mislabelled"] - large["beta_true_labels"]).mean()
+        assert bias_large < bias_small, "proportional attenuation, not an additive shift"
+
+    def test_estimator_is_unbiased_with_correct_labels(self):
+        from simulate_vintage_error import run
+
+        # Guards the comparison: if the clean arm were biased, the difference
+        # between arms would not isolate the labelling error.
+        result = run(n_reps=150, beta=0.25, seed=8)
+        assert result["beta_true_labels"].mean() == pytest.approx(0.25, abs=0.05)
