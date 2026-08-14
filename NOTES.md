@@ -552,3 +552,168 @@ old README had that nothing in the queue touched — funds under five years old,
 and parallel vehicles breaking the AR(1) ordering. Also carried over the "IRRs
 do not aggregate" point, which was in the old results section and would
 otherwise have been lost.
+
+---
+
+## 11. Hygiene pass — done, and it found a real break
+
+Docstrings: all eight analysis scripts now state what they produce
+(`run_analysis.py` was the one missing it). No network calls in the test suite
+— the Oregon discovery test monkeypatches `urlopen`, the French tests use
+inline CSV. `patsy` added to `requirements.txt`: `persistence.py` imports it
+directly and was relying on statsmodels pulling it in transitively, which is
+how a build breaks six months later for no visible reason.
+
+**Then the ignore fix broke offline reproduction, and I only caught it by
+actually cloning the repo and running it.** Two follow-up commits:
+
+- `11b` — ignoring `data/calpers_raw.csv` left `run_real_analysis.py` with no
+  input in a fresh clone. That file is *source data*, not a derived artefact:
+  CalPERS publishes only the current quarter, so it cannot be re-fetched later,
+  which is the same argument that keeps the Oregon PDFs. It is now archived
+  under a dated, never-overwritten name in `data/snapshots/` and tracked.
+- `11c` — three more scripts read the gitignored `calpers_snapshot.csv`.
+  Added `resolve_snapshot()` to the package: prefer the working copy, fall back
+  to the newest dated archive copy.
+
+Verified by cloning into a temp directory and running `./run_all.sh --offline`
+from scratch: reproduces beta = 0.2142 and lambda = 0.9443 exactly.
+
+Tracked vs ignored, final state: `firm_overrides.csv`, the snapshot archive,
+its `MANIFEST.csv`, and `figures/` are tracked, each with a stated reason in
+`.gitignore`. All 20 generated result CSVs are ignored.
+
+---
+
+# MORNING SUMMARY
+
+**All 11 queue tasks completed.** 14 commits, `ca23a34` → `HEAD`. Tests
+130 → 191, all passing. No stop condition was hit.
+
+## The headline
+
+**β = 0.214, SE 0.138, 95% CI [−0.057, 0.485], bootstrap p = 0.187**, on 65
+adjacent pairs of mature funds across 39 fund families. **The interval includes
+zero.** Full write-up in `RESULTS.md`; ninety-second version at the top of
+`README.md`.
+
+The finding I would lead with in an interview is not that number but the
+sequence: β falls 0.390 → 0.248 → 0.214 as the specification tightens from
+"any earlier fund predicts any later one, including funds too young to have
+realised anything" to "fund k predicts fund k+1, mature funds only". Only the
+loosest row looks significant.
+
+## Sample funnel
+
+| step | n |
+|---|---|
+| rows published by CalPERS | 462 |
+| after share-class dedup | 462 |
+| computable TVPI | 459 |
+| in families with 2+ funds | 204 |
+| lagged pairs | 129 |
+| adjacent pairs | 100 |
+| **mature and adjacent — estimation sample** | **65** |
+
+## Specification table
+
+| specification | β | SE | 95% CI | p | p_boot | n |
+|---|---|---|---|---|---|---|
+| 1. All funds, vintage FE | 0.390 | 0.139 | [0.118, 0.663] | 0.005 | 0.006 | 129 |
+| 2. Mature only, vintage FE | 0.248 | 0.109 | [0.035, 0.461] | 0.023 | 0.045 | 87 |
+| **3. Mature, adjacent — HEADLINE** | **0.214** | **0.138** | **[−0.057, 0.485]** | 0.121 | **0.187** | 65 |
+| 4. + log commitment | 0.215 | 0.145 | [−0.069, 0.500] | 0.138 | 0.223 | 65 |
+| 5. + fund number | 0.193 | 0.136 | [−0.073, 0.459] | 0.156 | 0.212 | 65 |
+| 6. Excl. vintage anomalies | 0.214 | 0.138 | [−0.057, 0.485] | 0.121 | 0.187 | 65 |
+| 7. Dependent = net IRR | 0.123 | 0.110 | [−0.093, 0.339] | 0.263 | 0.320 | 63 |
+| 8. Winsorised 1/99 | 0.214 | 0.138 | [−0.057, 0.485] | 0.122 | 0.187 | 65 |
+| 8. Winsorised 5/95 | 0.222 | 0.158 | [−0.087, 0.532] | 0.158 | 0.219 | 65 |
+| 9. Families with 3+ funds | 0.148 | 0.211 | [−0.265, 0.562] | 0.482 | 0.696 | 44 |
+
+Mapping regimes: β = 0.270 (regex only) / 0.245 (high-confidence) / 0.214 (all
+merges); spread 0.055, inside one SE. Leave-one-family-out [0.138, 0.281] over
+39 refits; leave-one-vintage-out [0.118, 0.308] over 17; none reaches zero.
+Spearman within vintage +0.230, permutation p 0.239. Transition diagonal 36.2%
+vs 25.9% null, p = 0.089.
+
+## What did not get done, and why
+
+- **Buyout-only specification — impossible.** Neither plan publishes a strategy
+  field. I considered classifying from fund names and rejected it: "Ares
+  Corporate Opportunities" and "GSO Energy Partners" are credit vehicles whose
+  names say nothing of the kind. A keyword rule would produce a column that
+  looks like data and is a guess.
+- **PME remains infrastructure, not a finding.** The archive tripled the
+  eligible sample (24 → 71 funds, 63 computed) and moved the median PME by
+  0.001. Only 4 of 63 have DPI above 0.5. It needs years, not code.
+- **Nothing was deferred for time.** Every queue item was either completed or
+  reported impossible with a reason.
+
+## Judgement calls made unattended
+
+1. **Replaced Oregon URL-templating with link discovery** (task 1). The queue
+   said to try the template back to 2015; the template found 8 reports across
+   52 probes, reading the holdings page found 18. Five naming conventions in
+   use. This roughly tripled the PME sample.
+2. **Manifest covers raw PDFs, not just CSVs** (task 2), and preserves
+   `download_timestamp` across rebuilds — restamping it would destroy the
+   provenance the file exists to hold.
+3. **`build_panel(log=False)`** so row 7 can use net IRR in levels. Logging an
+   IRR would have mapped every losing fund to log(0.01).
+4. **`leave_one_out(levels=…)`** after my first run reported 174 refits when
+   only 39 families are in the estimation sample. 135 no-op refits make an
+   estimate look far more robust than it is.
+5. **Vintage coverage is two panels, not a twin y-axis** (task 7). Two
+   unrelated scales on one axis invites a reading of "crossing" that is an
+   artefact of scale placement.
+6. **Figures committed, generated CSVs not.** Figures are a deliverable the
+   reader sees.
+7. **`calpers_raw.csv` reclassified as source data** and archived dated, after
+   the fresh-clone test showed offline reproduction broken.
+
+## Two real bugs found and fixed
+
+- **The CalPERS adapter stamped `as_of` with today's date.** It reports the
+  quarter ending 2025-09-30 but the snapshot claimed 2026-08-13. Task 6 is
+  impossible without fixing this — every cross-plan comparison would have
+  measured eleven months of NAV growth and called it reporting error. The
+  reporting date is in the page's prose; `parse_as_of()` now reads it and
+  `load()` raises rather than defaulting to today.
+- **Offline reproduction broken by my own hygiene pass**, caught only by
+  cloning and running. Fixed in 11b/11c.
+
+## Flagged — where to spend review time first
+
+1. **Tailwind Capital Partners III, the 68% cross-plan outlier.** CalPERS
+   reports TVPI 1.693, Oregon 1.006, same quarter, same fund name and number. I
+   cannot explain it. Fee terms do not produce a 68% gap. Candidates: one plan
+   bought in on the secondary, materially different closes, or a genuine
+   matching error where the two plans hold different vehicles under one name.
+   **This one drives the headline attenuation figure** — excluding it moves
+   lambda from 0.944 to 0.981. Lowest-confidence item in the run.
+2. **18 of 43 cross-plan pairs disagree on vintage year**, always with CalPERS
+   dating equal or later (+1 in 14 cases, +2 in 4). My reading is that CalPERS
+   records its own first capital call and Oregon the fund's vintage, but I have
+   not confirmed it against either plan's methodology note. If it is right,
+   vintage fixed effects — the main control in every specification — carry
+   about a year of error for 40% of funds. Worth checking; it is a limitation I
+   have not seen stated anywhere in the project.
+3. **Row 6 is a no-op** and should not be read as independent evidence. Share-
+   class dedup already absorbed every vintage anomaly via its earliest-vintage
+   rule, so "excluding anomalies" excludes nothing.
+4. **`lambda` on 43 pairs is a thin variance estimate.** The bootstrap interval
+   [0.828, 0.990] is wide, and the correction (1.02–1.06×) changes no
+   conclusion. Do not quote the corrected β as if it were precise.
+5. **Medium-confidence merges in `firm_overrides.csv`** — the VIP, BDC,
+   Lightspeed Inception/Ignite, General Catalyst Health Assurance and Genstar
+   Opportunities rows. All are marked `confidence=medium` with reasons. The
+   high-confidence-only regime gives β = 0.245 against 0.214, so they are not
+   driving the result, but they are the rows a reviewer should check first.
+
+## Suggested next step
+
+More **families**, not more funds — precision is bounded by 39 clusters, not by
+459 observations. CalSTRS and Washington State publish the same shape of data;
+the Oregon adapter shows the PDF path costs about a day. Each new plan also
+adds cross-plan overlap pairs, which is the only route to a measurement-error
+estimate that is not a floor.
