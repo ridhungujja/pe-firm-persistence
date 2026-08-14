@@ -528,3 +528,27 @@ leaves OLS consistent — and stated as unknown where it is (active-partnerships
 selection).
 
 Nothing in it is asserted that is not in a committed CSV.
+
+---
+
+## 10. README rewrite — done
+
+Ninety-second section at the top: the question, β = 0.214 with its interval and
+the plain statement that it includes zero, the specification-gap point, what
+the data is, and an explicit "what it cannot support" list. Coefficient plot
+directly under it.
+
+Simulated results no longer lead. They now sit under "Validation on simulated
+data", which is what they are — evidence the estimator works before it meets
+real data — rather than the project's results. Real results are the results
+section.
+
+Test count 130 → 191. Repository map added.
+
+**Limitations kept and expanded, not trimmed.** The rewrite added four
+(vintage-label error, PME coverage, no strategy dimension, the overlap
+correction being a floor) and kept every original one, including the two the
+old README had that nothing in the queue touched — funds under five years old,
+and parallel vehicles breaking the AR(1) ordering. Also carried over the "IRRs
+do not aggregate" point, which was in the old results section and would
+otherwise have been lost.

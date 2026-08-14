@@ -1,134 +1,183 @@
 # Private equity fund performance: measurement and persistence
 
-Estimating whether private equity general partners show persistent skill,
-and measuring how far the answer moves when you fix the sample problems that
-the data usually hides.
+Estimating whether private equity general partners show persistent skill, and
+measuring how far the answer moves when you fix the sample problems the data
+usually hides.
 
 This is deliberately not a dashboard. The deliverable is an estimate with a
 standard error and an argument about what it identifies.
 
+---
+
+## What this project shows — the ninety-second version
+
+**The question.** Does a strong fund predict a strong successor? Kaplan and
+Schoar (2005) found it did; later work using better data found the effect had
+weakened substantially after the early 2000s.
+
+**The answer, on this sample.** A persistence coefficient of
+
+> **β = 0.214, 95% CI [−0.057, 0.485]**, bootstrap p = 0.187
+> — 65 fund pairs across 39 fund families
+
+**The interval includes zero.** This sample cannot distinguish persistence from
+noise, and [RESULTS.md](RESULTS.md) sets out precisely why.
+
+**The point is the gap between specifications, not the number.** The same data
+yields a decisive-looking β = 0.390 (p = 0.005) if you pool non-adjacent fund
+pairs and keep funds too young to have realised anything. Tightening to
+adjacent pairs of mature funds — the LP's actual decision problem, fund k
+against fund k+1 — takes it to 0.214 and the significance disappears. That gap
+is the methodological content.
+
+**The data.** CalPERS (462 funds, HTML) and Oregon PERS (18 quarterly PDFs back
+to 2021, parsed with pdfplumber). Both are public-disclosure tables, the free
+substitute for Preqin. 43 funds appear in both at the same reporting date,
+which gives a direct read on cross-plan reporting noise.
+
+**What it cannot support.** Any claim that persistence is present, or that it is
+absent. Any claim about realised performance from PME — 59 of 63 PME-eligible
+funds carry ~99% of their value as unrealised GP marks. Any claim about
+strategy, since neither plan publishes one.
+
+![beta across specifications](figures/coefficients.png)
+
+---
+
 ## Why this framing
 
-"Do good funds stay good?" is a question with a real empirical literature and
-a known trajectory: Kaplan and Schoar (2005) found strong persistence in
-buyout and venture returns; later work using better data and more careful
-timing found it had weakened substantially after the early 2000s. Replicating
-that arc requires panel methods, a defensible benchmark, and an honest
-treatment of selection — which is what an econometrics supervisor wants to
-see. A returns calculator demonstrates none of it.
+"Do good funds stay good?" is a question with a real empirical literature and a
+known trajectory. Replicating that arc requires panel methods, a defensible
+benchmark, and an honest treatment of selection — which is what an econometrics
+supervisor wants to see. A returns calculator demonstrates none of it.
 
 ## Quickstart
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q          # 130 tests
-python analysis/run_analysis.py
+python -m pytest -q          # 191 tests
+./run_all.sh --offline       # reproduce every table and figure from the cached archive
 ```
 
-The analysis script simulates a fund universe with a *known* skill process,
-measures it with the same code path real data would use, and estimates
-persistence under seven specifications.
+`./run_all.sh` without `--offline` re-fetches both plans first. Offline mode is
+the reproducible one: Oregon rotates old quarters off its site, so an online
+run later analyses a different sample without saying so.
+
+## Results
+
+### Persistence, real data
+
+Standard errors clustered on family; bootstrap p from a wild cluster bootstrap
+with Rademacher weights, 9,999 replications.
+
+| Specification | β | SE | 95% CI | p | p (boot) | n |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1. All funds, vintage FE | 0.390 | 0.139 | [0.118, 0.663] | 0.005 | 0.006 | 129 |
+| 2. Mature only, vintage FE | 0.248 | 0.109 | [0.035, 0.461] | 0.023 | 0.045 | 87 |
+| **3. Mature, adjacent only — headline** | **0.214** | **0.138** | **[−0.057, 0.485]** | 0.121 | **0.187** | **65** |
+| 4. + log commitment | 0.215 | 0.145 | [−0.069, 0.500] | 0.138 | 0.223 | 65 |
+| 5. + fund number | 0.193 | 0.136 | [−0.073, 0.459] | 0.156 | 0.212 | 65 |
+| 6. Excluding vintage anomalies | 0.214 | 0.138 | [−0.057, 0.485] | 0.121 | 0.187 | 65 |
+| 7. Dependent = net IRR | 0.123 | 0.110 | [−0.093, 0.339] | 0.263 | 0.320 | 63 |
+| 8. Winsorised 5/95 | 0.222 | 0.158 | [−0.087, 0.532] | 0.158 | 0.219 | 65 |
+| 9. Families with 3+ funds | 0.148 | 0.211 | [−0.265, 0.562] | 0.482 | 0.696 | 44 |
+
+Three results behind the table:
+
+- **The family mapping is not driving it.** Re-run under three regimes — raw
+  regex stems, high-confidence merges only, all 70 merges — β is 0.270 / 0.245 /
+  0.214. The spread is well inside one standard error.
+- **No single family or vintage carries it.** Leave-one-family-out spans
+  [0.138, 0.281] over 39 refits; leave-one-vintage-out [0.118, 0.308] over 17.
+  None reaches zero.
+- **The bootstrap p exceeds the analytic p in every row.** At 20 clusters the
+  cluster-robust asymptotic rejects a true null 9–13% of the time against a
+  nominal 5%; the bootstrap holds 4–6%. The error is one-directional — it
+  manufactures persistence rather than hiding it.
+
+### Validation on simulated data
+
+The estimator is checked against a Takahashi-Alexander simulation with a
+*known* skill process before it is pointed at real data. Across six settings
+with true β from 0.00 to 0.44, every 95% interval covers the truth.
+
+![estimator recovers known beta](figures/simulation_validation.png)
+
+The simulation also separates two things usually conflated as "survivorship
+bias": truncating on the *predecessor* leaves E[y | y_lag] intact and OLS
+consistent, while censoring the *outcome* cuts β by 37%. And **IRRs do not
+aggregate** — averaging fund IRRs answers a different question from pooling
+cash flows, so the scripts report equal-weighted against capital-weighted PME
+to keep the gap visible.
 
 ## What is implemented
 
-**Measurement** (`src/pefund/metrics.py`)
+**Measurement** (`src/pefund/metrics.py`) — DPI, RVPI, TVPI, XIRR on irregular
+dates (returns NaN rather than a fake root when no sign change exists),
+Kaplan-Schoar PME, Direct Alpha, Long-Nickels PME with its failure mode
+guarded. Every metric is tested against a case with an analytic answer.
 
-| Metric | Notes |
-| --- | --- |
-| DPI, RVPI, TVPI | Decomposition of realised vs unrealised value |
-| IRR (XIRR) | Brent's method on irregular dates; returns NaN rather than a fake root when no sign change exists |
-| Kaplan-Schoar PME | Index-discounted wealth ratio |
-| Direct Alpha | Annualised excess return, comparable across horizons |
-| Long-Nickels PME | Included with its known failure mode guarded |
+**Estimation** (`src/pefund/persistence.py`) — AR(1) in fund sequence with
+vintage fixed effects and clustered standard errors; fund-number gaps so a
+specification can require *adjacent* funds; wild cluster bootstrap; quartile
+transitions with a within-vintage permutation test; winsorising,
+leave-one-out, and a rank-correlation check that assumes no functional form.
 
-Every metric is tested against a case with an analytic answer.
+**Ingestion** (`src/pefund/ingest/`) — canonical schema; GP-name normalisation
+with hand-checked overrides; share-class deduplication; fund-number parsing;
+a vintage-integrity diagnostic; cash-flow reconstruction by differencing
+snapshots. Adapters: `calpers.py` (HTML), `oregon.py` (PDF), `french.py`
+(benchmark), `synthetic.py` (simulation).
 
-**Estimation** (`src/pefund/persistence.py`)
+**Analysis** (`analysis/`) — `fetch_calpers.py`, `fetch_oregon.py`,
+`build_family_review.py`, `run_real_analysis.py` (the headline output),
+`run_overlap.py`, `run_pme.py`, `run_analysis.py`, `make_figures.py`.
 
-AR(1) in fund sequence number with vintage fixed effects and standard errors
-clustered two-way on firm and vintage. The two-way clustered covariance
-matrix is not guaranteed positive semi-definite; when it fails the code warns,
-falls back to one-way clustering, and labels the specification so the change
-cannot vanish into a results table. Quartile transition matrices are computed
-within vintage, so a strong vintage cannot masquerade as a strong GP.
-
-**Simulation** (`src/pefund/ingest/synthetic.py`)
-
-Takahashi-Alexander commitment model for cash flow timing, latent GP skill,
-vintage shocks, market loading, and endogenous fundraising. Since the true
-persistence coefficient is `var(skill) / (var(skill) + var(idiosyncratic))`,
-the estimator can be checked rather than trusted.
-
-**Ingestion** (`src/pefund/ingest/base.py`)
-
-Canonical schema, GP-name normalisation, sequence numbering, validation
-flags, and reconstruction of quarterly flows by differencing consecutive
-snapshots. Adapters target public pension disclosures — CalPERS, CalSTRS,
-Oregon PERS, WSIB, TRS Texas — which are the free substitute for Preqin.
-
-## Results on simulated data
-
-True β = 0.219 by construction.
-
-| Specification | β | SE | n |
-| --- | --- | --- | --- |
-| 1. No selection, final lag, vintage FE | 0.233 | 0.042 | 748 |
-| 2. Selected sample, no vintage FE | 0.148 | 0.054 | 503 |
-| 3. Selected sample, vintage FE | 0.232 | 0.059 | 503 |
-| 4. + fund size control | 0.230 | 0.060 | 503 |
-| 5. Lag known at fundraise | 0.261 | 0.064 | 503 |
-| 6. Dependent variable = log PME | 0.232 | 0.059 | 503 |
-| 7. Bottom quartile of outcome undisclosed | 0.147 | 0.047 | 367 |
-
-Three things worth defending in an interview:
-
-**Selection on the regressor is harmless; selection on the outcome is not.**
-Spec 3 conditions the sample on the *predecessor* fund clearing a bar, and β
-barely moves (−0.002). That is not a null result — truncating on a regressor
-restricts its range but leaves E[y | y_lag] intact, so OLS stays consistent.
-Spec 7 censors the *outcome* instead and β falls 37%. Most informal talk about
-"survivorship bias in PE data" does not distinguish these, and the distinction
-determines whether your estimate is usable.
-
-**Omitting vintage fixed effects attenuates here rather than inflating.**
-A GP's successive funds sit in different vintages, so the vintage shock enters
-the lagged regressor as classical measurement error. The intuition that
-omitted common shocks always flatter apparent skill is wrong in this DGP; the
-sign depends on how vintage effects correlate across a firm's funds. Simulate
-before asserting a direction.
-
-**IRRs do not aggregate.** Averaging fund IRRs answers a different question
-than pooling cash flows, and the script reports equal-weighted against
-capital-weighted PME to make the gap visible.
-
-## Roadmap for real data
-
-1. Download fund tables from two or three plans. Run this locally — sandboxes
-   with domain allowlists will block state pension domains.
-2. Normalise GP identity. `normalise_firm_ids` is a first pass; hand-check the
-   fifty largest firms and keep corrections in a version-controlled CSV. The
-   persistence estimate is only as good as this mapping, and it is the single
-   most labour-intensive step.
-3. Build the benchmark from a total-return series, not a price index. A price
-   index drops roughly two points a year of dividends and inflates every PME
-   in the panel over a ten-year fund life.
-4. Reconstruct quarterly flows by differencing snapshots if no cash flow file
-   exists, and state in the write-up that within-quarter timing is lost.
-5. Re-run the seven specifications and compare against the published
-   literature estimates.
+Data conventions, the family-matching rules, and the override schema are in
+[CLAUDE.md](CLAUDE.md); data sources in [DATA_SOURCES.md](DATA_SOURCES.md).
 
 ## Known limitations
 
-- Funds younger than about five years are mostly unrealised GP marks; they are
-  flagged, not dropped, and results should be shown both ways.
-- Interim NAVs are stale and smoothed, which attenuates any estimate using
-  early-life performance as the regressor.
-- Public plan samples observe only funds those LPs committed to, so the
+Ordered by how much they should worry you. Direction of bias where known.
+
+- **Small n dominates.** 65 pairs across 39 families. The interval is wide
+  enough to contain both the Kaplan-Schoar-era estimates and zero. This is an
+  imprecise estimate, not a precise null.
+- **Active partnerships only.** CalPERS drops fully exited funds, so old
+  vintages that remain are survivors in a specific, non-random sense — a
+  pre-2010 fund appears only if it is still open twenty years on.
+- **Unrealised marks.** Most funds are 2020s vintages carrying GP valuations
+  rather than realisations. Interim NAVs are stale and smoothed, which
+  **attenuates β toward zero**. The cross-plan overlap bounds only the part
+  that differs between two LPs of the same fund (λ ≈ 0.94–0.98, a 1.02–1.06×
+  correction); the stale-marks component is common to both reports and cancels
+  in the difference, so true attenuation is larger by an unknown amount.
+- **The vintage label carries error.** 18 of 43 cross-plan matches disagree on
+  vintage year, always with CalPERS dating equal or later. Vintage fixed
+  effects are the main control in every specification.
+- **LP selection.** Only funds these plans chose to back are observed, so the
   universe is conditioned on ex-ante institutional attractiveness. This cannot
   be fixed with the available data and belongs in the limitations section, not
   in a footnote.
-- The AR(1) framing assumes a clean fund ordering. Parallel vehicles raised in
-  the same vintage break it and are flagged by `add_sequence_numbers`.
+- **Funds younger than about five years** are mostly unrealised GP marks. They
+  are flagged, not dropped, and results are shown both ways.
+- **PME is infrastructure, not a finding.** Only funds that had drawn no
+  capital when the archive opens have a recoverable flow history — 63 of 490.
+  Their median KS PME is 0.957, but 59 of them carry ~99% of value as
+  unrealised marks, so that number describes carrying values against the
+  market, not realisations against it.
+- **No strategy dimension.** Neither plan publishes one, so buyout cannot be
+  separated from venture or credit. Classifying by fund-name keywords would be
+  a guess presented as data.
+- **Parallel vehicles break the AR(1) ordering.** Flagged by
+  `add_sequence_numbers` rather than silently ranked.
+
+## What would improve it most
+
+More *families*, not more funds — precision is bounded by 39 clusters. CalSTRS
+and Washington State publish the same shape of data and are the obvious next
+adapters. Each additional year of Oregon archive also ages the PME sample
+toward the point where realised and marked funds can be compared with a real n.
 
 ## References
 
@@ -141,6 +190,9 @@ capital-weighted PME to make the gap visible.
 - Braun, R., Jenkinson, T. and Stoff, I. (2017). How persistent is private
   equity performance? Evidence from deal-level data. *Journal of Financial
   Economics* 123(2).
+- Cameron, A.C., Gelbach, J. and Miller, D. (2008). Bootstrap-based
+  improvements for inference with clustered errors. *Review of Economics and
+  Statistics* 90(3).
 - Gredil, O., Griffiths, B. and Stucke, R. (2014). Benchmarking private
   equity: the direct alpha method.
 - Takahashi, D. and Alexander, S. (2002). Illiquid alternative asset fund
