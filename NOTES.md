@@ -267,3 +267,52 @@ nothing of the kind, and a keyword rule would produce a strategy column that
 looks like data and is actually a guess. Left out rather than filled in.
 
 Tests: 165 → 175.
+
+---
+
+## 5. PME on the enlarged archive — done, but still infrastructure
+
+18 quarters instead of 8. PME computed for **63 funds** (up from 18).
+
+| | 8 quarters | 18 quarters |
+|---|---|---|
+| funds in archive | 473 | 490 |
+| inception-observable | 24 | 71 |
+| PME actually computed | 18 | 63 |
+| median KS PME | 0.956 | 0.957 |
+| median direct alpha | −5.62% | −1.47% |
+| median TVPI | 1.065 | 1.182 |
+| median share unrealised | 100.0% | 98.7% |
+
+Tripling the sample moved the median PME by 0.001. Direct alpha moved from
+−5.6% to −1.5%, which is the more meaningful change and mostly reflects the
+sample now including 2019–2021 vintages with a little more life behind them.
+
+### Split by realisation, as the queue asked
+
+| group | n | median PME | median DPI | median unrealised |
+|---|---|---|---|---|
+| DPI > 0.5 (realising) | 4 | 0.939 | 0.568 | 56.9% |
+| DPI ≤ 0.5 (mostly marks) | 59 | 0.957 | 0.013 | 98.9% |
+
+**Four funds is not a comparison.** The two medians are close, but with n = 4
+on one side that is not evidence they agree. The honest read is that the
+realised group is too small to be a check on the marked group, which was the
+question worth asking.
+
+**Verdict: this stays infrastructure, not a finding.** 59 of 63 funds have
+returned essentially nothing (median DPI 0.013) and carry 98.9% of their value
+as unrealised marks. A PME of 0.957 on that sample says the GPs' own carrying
+values have grown slightly slower than the US market since the funds were
+struck. It does not say anything about realised performance, and it should not
+be quoted as if it did.
+
+The gap between 71 inception-observable and 63 computed: 8 funds have no
+non-zero reconstructed flow yet — committed and observed at multiple dates,
+but no capital called during the window.
+
+**What would change this.** Each additional year of archive both adds
+inception-observable funds and ages the existing ones. The 2021 vintages in
+this sample reach year seven or eight around 2028-29, at which point a
+realised-versus-marked comparison becomes possible with a real n. The
+machinery is built and tested; it needs time, not code.

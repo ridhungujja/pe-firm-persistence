@@ -123,6 +123,7 @@ def main() -> None:
     result = pd.DataFrame(rows)
     result.to_csv(OUT, index=False)
 
+    result["dpi"] = result["distributions"] / result["contributions"].replace(0, np.nan)
     sample = result[result["inception_observed"] & result["ks_pme"].notna()]
     print(f"\nPME computed for {len(sample)} funds, benchmark = French market "
           f"total return")
@@ -138,12 +139,33 @@ def main() -> None:
         print(f"  median share of value unrealised  {unrealised.median():.1%}")
         print(f"  vintages {int(sample['vintage'].min())}-{int(sample['vintage'].max())}")
 
+        # Split by realisation. A PME built from a GP's carrying value and a
+        # PME built from cash returned are different measurements wearing the
+        # same name, and pooling them hides which one the average describes.
+        realised = sample[sample["dpi"] > 0.5]
+        marked = sample[sample["dpi"] <= 0.5]
+        print("\n  by realisation")
+        print(f"    {'group':28} {'n':>4} {'med PME':>9} {'med DPI':>9} "
+              f"{'med unrealised':>15}")
+        for label, group in [("DPI > 0.5 (realising)", realised),
+                             ("DPI <= 0.5 (mostly marks)", marked)]:
+            if group.empty:
+                print(f"    {label:28} {0:>4}        --        --              --")
+                continue
+            share = group["nav"] / group["nav"].add(group["distributions"])
+            print(f"    {label:28} {len(group):>4} "
+                  f"{group['ks_pme'].median():>9.3f} "
+                  f"{group['dpi'].median():>9.3f} "
+                  f"{share.median():>14.1%}")
+
     print(
-        "\nRead this sample for what it is. Every fund in it is young enough "
-        "that\nits value is overwhelmingly the GP's own carrying mark rather "
-        "than cash\nreturned, which is the case Oregon itself labels 'not "
-        "meaningful'. The\nnumber measures marks against the market, not "
-        "realisations against it."
+        "\nRead this sample for what it is. Almost every fund in it is young "
+        "enough\nthat its value is overwhelmingly the GP's own carrying mark "
+        "rather than\ncash returned, which is the case Oregon itself labels "
+        "'not meaningful'.\nFor those funds the number measures marks against "
+        "the market, not\nrealisations against it. Treat this as "
+        "infrastructure that will become a\nfinding as the archive ages, not "
+        "as a finding now."
     )
     print(f"\nWrote {OUT}")
 
