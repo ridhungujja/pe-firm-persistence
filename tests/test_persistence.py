@@ -15,6 +15,7 @@ from pefund.persistence import (
     build_panel,
     estimate,
     quartile_transitions,
+    transition_permutation_test,
     wild_cluster_bootstrap,
 )
 
@@ -296,3 +297,91 @@ class TestWildClusterBootstrap:
         )
         assert boot.beta == pytest.approx(analytic.beta, rel=1e-10)
         assert boot.n_clusters == analytic.n_firms
+
+
+class TestTransitionPermutation:
+    """Validation path: the test must not see persistence in independent data.
+
+    With four categories the diagonal of a transition matrix holds 25% of the
+    mass under pure noise. The whole point of the permutation test is to say
+    whether an observed diagonal is further from that than sampling error
+    explains, so the two tests that matter are its behaviour under a true null
+    and under perfect dependence.
+    """
+
+    @staticmethod
+    def _panel(rho, n_firms=400, seed=11):
+        """Pairs whose successor performance correlates rho with predecessor."""
+        rng = np.random.default_rng(seed)
+        lag = rng.normal(size=n_firms)
+        now = rho * lag + np.sqrt(max(1 - rho**2, 0)) * rng.normal(size=n_firms)
+        return pd.DataFrame(
+            {
+                "firm_id": [f"F{i}" for i in range(n_firms)],
+                # Several vintages, each large enough to cut into quartiles.
+                "vintage": rng.integers(2000, 2010, size=n_firms),
+                "y": now,
+                "y_lag": lag,
+            }
+        )
+
+    def test_independent_data_does_not_reject(self):
+        result = transition_permutation_test(self._panel(0.0), n_permutations=999)
+        assert result.p_value > 0.05
+        # The null diagonal must sit at chance for four quartiles.
+        assert result.null_mean == pytest.approx(0.25, abs=0.03)
+
+    def test_strong_persistence_is_detected(self):
+        result = transition_permutation_test(self._panel(0.8), n_permutations=999)
+        assert result.p_value < 0.01
+        assert result.observed_diagonal > result.null_mean
+
+    def test_counts_sum_to_the_pair_count(self):
+        result = transition_permutation_test(self._panel(0.3), n_permutations=99)
+        assert result.counts.to_numpy().sum() == result.n_pairs
+
+    def test_counts_are_integers_not_proportions(self):
+        result = transition_permutation_test(self._panel(0.3), n_permutations=99)
+        assert result.counts.to_numpy().max() > 1
+
+    def test_p_value_is_never_exactly_zero(self):
+        # A finite permutation set cannot resolve p = 0, and reporting it
+        # would overstate the test's resolution.
+        result = transition_permutation_test(self._panel(0.95), n_permutations=99)
+        assert result.p_value >= 1 / 100
+
+    def test_too_few_pairs_returns_nan_rather_than_a_number(self):
+        tiny = pd.DataFrame(
+            {"firm_id": ["A", "B"], "vintage": [2000, 2000],
+             "y": [1.0, 2.0], "y_lag": [1.0, 2.0]}
+        )
+        result = transition_permutation_test(tiny, n_permutations=99)
+        assert np.isnan(result.p_value)
+
+    def test_shuffling_happens_within_vintage(self):
+        # If the shuffle crossed vintages it would also destroy the vintage
+        # structure, and the null would no longer be "the predecessor carries
+        # no information" but "nothing carries information".
+        panel = self._panel(0.0, n_firms=300, seed=5)
+        panel["y"] = panel["y"] + panel["vintage"] * 10.0   # huge vintage effects
+        panel["y_lag"] = panel["y_lag"] + panel["vintage"] * 10.0
+        result = transition_permutation_test(panel, n_permutations=999)
+        assert result.p_value > 0.05, (
+            "vintage effects alone must not register as persistence"
+        )
+
+
+class TestLevelsDependentVariable:
+    def test_log_false_leaves_the_outcome_untransformed(self):
+        funds, metrics = make_ar_panel(n_firms=20)
+        metrics = metrics.rename(columns={"tvpi": "net_irr"})
+        metrics["net_irr"] = metrics["net_irr"] - 1.0     # can be negative
+        panel = build_panel(funds, metrics, "net_irr", log=False)
+        assert panel["y"].equals(panel["net_irr"])
+
+    def test_negative_outcomes_survive_when_not_logged(self):
+        funds, metrics = make_ar_panel(n_firms=20)
+        metrics = metrics.rename(columns={"tvpi": "net_irr"})
+        metrics["net_irr"] = -0.2
+        panel = build_panel(funds, metrics, "net_irr", log=False)
+        assert (panel["y"] < 0).all(), "logging an IRR would drop every losing fund"

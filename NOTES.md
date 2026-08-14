@@ -98,3 +98,104 @@ Wired into both fetch scripts, so the manifest refreshes whenever the archive
 does. The shipped archive currently verifies clean.
 
 Tests: 137 → 156.
+
+---
+
+## 3. Core result — done
+
+`analysis/run_real_analysis.py`. Outputs `data/real_specifications.csv`,
+`data/mapping_robustness.csv`, `data/transition_test.csv`,
+`data/transition_counts.csv`.
+
+### Sample funnel (all merges)
+
+| | |
+|---|---|
+| rows published by CalPERS | 462 |
+| after share-class dedup | 462 |
+| funds with a computable TVPI | 459 |
+| distinct fund families | 330 |
+| families with 2+ funds | 75 |
+| **lagged pairs (estimation sample)** | **129** |
+| of which adjacent (gap = 1) | 100 |
+| **mature AND adjacent (headline)** | **65** |
+
+### Specification table (y = log TVPI, SEs clustered on family)
+
+| specification | beta | SE | 95% CI | p | p_boot | n | families |
+|---|---|---|---|---|---|---|---|
+| 1. All funds, vintage FE | 0.390 | 0.139 | [0.118, 0.663] | 0.005 | 0.006 | 129 | 75 |
+| 2. Mature only, vintage FE | 0.248 | 0.109 | [0.035, 0.461] | 0.023 | 0.045 | 87 | 51 |
+| **3. Mature, adjacent only [HEADLINE]** | **0.214** | **0.138** | **[−0.057, 0.485]** | 0.121 | **0.187** | 65 | 39 |
+| 4. Row 3 + log commitment | 0.215 | 0.145 | [−0.069, 0.500] | 0.138 | 0.223 | 65 | 39 |
+| 5. Row 3 + fund number | 0.193 | 0.136 | [−0.073, 0.459] | 0.156 | 0.212 | 65 | 39 |
+| 6. Row 3, excl. vintage anomalies | 0.214 | 0.138 | [−0.057, 0.485] | 0.121 | 0.187 | 65 | 39 |
+| 7. Row 3, dependent = net IRR | 0.123 | 0.110 | [−0.093, 0.339] | 0.263 | 0.320 | 63 | 37 |
+
+**The headline confidence interval includes zero.** No interpretive prose here
+— that belongs in task 9, written from these numbers.
+
+Three things I want flagged for review:
+
+1. **Beta falls monotonically as the specification tightens** (0.390 → 0.248 →
+   0.214) and significance goes with it. Row 1 pools non-adjacent pairs, so a
+   2007 fund can predict a 2021 one; that is the loose specification, not the
+   headline, and it is the only row that looks decisive.
+2. **Row 6 is identical to row 3 by construction.** There are zero vintage
+   anomalies left after share-class dedup (task 1.1 absorbed all four
+   Bridgepoint mis-stamps via the earliest-vintage rule), so "excluding
+   anomalies" excludes nothing. The row is kept because its being a no-op is
+   itself the finding, but it should not be read as independent evidence.
+3. **The bootstrap p exceeds the analytic p in every single row.** Row 2 is
+   the clean illustration: analytic 0.023 (significant at 5%) versus bootstrap
+   0.045 (barely). In the regex-only mapping regime the gap is starker —
+   analytic 0.037 versus bootstrap 0.129, i.e. the asymptotic would call it
+   significant and the bootstrap does not.
+
+### Mapping robustness
+
+| regime | merges | families | pairs | beta | SE | p | p_boot | n |
+|---|---|---|---|---|---|---|---|---|
+| regex only | 0 | 383 | 79 | 0.270 | 0.129 | 0.037 | 0.129 | 40 |
+| high-confidence only | 58 | 337 | 122 | 0.245 | 0.144 | 0.089 | 0.159 | 64 |
+| all merges | 70 | 330 | 129 | 0.214 | 0.138 | 0.121 | 0.187 | 65 |
+
+Spread in beta across regimes is 0.055, well inside one standard error
+(~0.14). **The 70 merge decisions are not driving the estimate.** They do
+drive the sample size: regex-only leaves 40 usable observations against 65,
+which is the cost of leaving split series unmerged.
+
+### Quartile transition permutation test
+
+47 mature adjacent pairs survive within-vintage quartile assignment. Cell
+counts (rows predecessor, columns successor):
+
+```
+                      1    2    3    4
+predecessor 1         6    2    3    3
+predecessor 2         4    3    3    1
+predecessor 3         0    4    3    3
+predecessor 4         4    2    1    5
+```
+
+Observed diagonal share 0.362; permutation null mean 0.259 (sd 0.068);
+**p = 0.089** over 9999 within-vintage shuffles.
+
+Shuffling within vintage preserves both the pairs-per-vintage count and the
+marginal outcome distribution, so the null is exactly "the predecessor carries
+no information", holding vintage structure fixed. There is a test asserting
+that large vintage effects alone do not register as persistence.
+
+### Code changes made for this task
+
+- `build_panel(..., log=True)`. Row 7 needs net IRR in levels: an IRR is
+  already a rate and can be negative, so `np.log(clip(lower=0.01))` would have
+  silently mapped every losing fund to log(0.01).
+- `_quartile_frame` factored out of `quartile_transitions` so the counts and
+  the permutation test share one definition of a quartile pair.
+- `fetch_calpers.py` now caches `data/calpers_raw.csv`, the un-normalised
+  table. The three mapping regimes each need the full ingestion path re-run,
+  and share-class dedup keys on `firm_id`, so a regime cannot be recovered
+  from the processed snapshot.
+
+Tests: 156 → 165.

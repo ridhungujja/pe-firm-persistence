@@ -42,6 +42,13 @@ def main() -> None:
         raise SystemExit(1) from exc
 
     n_raw_rows = len(df)
+
+    # The un-normalised table, cached so the mapping-robustness table can
+    # rebuild each regime (regex-only / high-confidence / all merges) without
+    # three more network round-trips. Share-class dedup depends on firm_id, so
+    # a regime cannot be recovered from the processed snapshot.
+    df.to_csv(OUT / "calpers_raw.csv", index=False)
+
     df["firm_id_raw"] = normalise_firm_ids(df)
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"])
     df["fund_number"] = parse_fund_number(df["fund_name"])

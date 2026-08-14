@@ -67,6 +67,7 @@ def build_panel(
     metrics: pd.DataFrame,
     performance_col: str = "tvpi",
     predecessor_col: str | None = None,
+    log: bool = True,
 ) -> pd.DataFrame:
     """Join fund attributes to metrics and attach the predecessor fund.
 
@@ -87,14 +88,21 @@ def build_panel(
     df = funds.merge(metrics, on="fund_id", how="inner", validate="one_to_one")
     df = df.sort_values(["firm_id", "sequence"]).reset_index(drop=True)
 
-    df["y"] = np.log(df[performance_col].clip(lower=0.01))
+    # A multiple is bounded below by zero and skewed, so logs make beta a
+    # unit-free elasticity and stop the left tail compressing. An IRR is
+    # already a rate and can be negative, so it enters in levels; taking logs
+    # of it would silently drop every losing fund.
+    df["y"] = np.log(df[performance_col].clip(lower=0.01)) if log else df[performance_col]
 
     grouped = df.groupby("firm_id", sort=False)
     if predecessor_col is None:
         df["y_lag"] = grouped["y"].shift(1)
         df["lag_source"] = "final"
-    else:
+    elif log:
         df["y_lag"] = np.log(grouped[predecessor_col].shift(1).clip(lower=0.01))
+        df["lag_source"] = "interim"
+    else:
+        df["y_lag"] = grouped[predecessor_col].shift(1)
         df["lag_source"] = "interim"
 
     df["prior_sequence"] = grouped["sequence"].shift(1)
@@ -420,6 +428,27 @@ def results_table(results: list[PersistenceResult]) -> pd.DataFrame:
     return pd.DataFrame([r.as_row() for r in results])
 
 
+def _quartile_frame(panel: pd.DataFrame, within: str = "vintage") -> pd.DataFrame:
+    """Pairs labelled by predecessor and successor quartile, assigned within
+    `within` so a strong vintage cannot masquerade as a strong GP.
+
+    A group with fewer than four distinct values cannot be cut into quartiles
+    and is dropped rather than cut into whatever bins happen to fit.
+    """
+    df = panel.dropna(subset=["y", "y_lag"]).copy()
+    if df.empty:
+        return df
+
+    def q(s: pd.Series) -> pd.Series:
+        if s.nunique() < 4:
+            return pd.Series(np.nan, index=s.index)
+        return pd.qcut(s, 4, labels=[1, 2, 3, 4]).astype(float)
+
+    df["q_now"] = df.groupby(within)["y"].transform(q)
+    df["q_prev"] = df.groupby(within)["y_lag"].transform(q)
+    return df.dropna(subset=["q_now", "q_prev"])
+
+
 def quartile_transitions(
     panel: pd.DataFrame, within: str = "vintage"
 ) -> pd.DataFrame:
@@ -429,20 +458,101 @@ def quartile_transitions(
     successor's; cells are conditional probabilities. Quartiles are assigned
     within `within` so that a good vintage does not masquerade as a good GP.
     """
-    df = panel.dropna(subset=["y", "y_lag"]).copy()
+    df = _quartile_frame(panel, within)
     if df.empty:
         return pd.DataFrame()
-
-    def q(s: pd.Series) -> pd.Series:
-        if s.nunique() < 4:
-            return pd.Series(np.nan, index=s.index)
-        return pd.qcut(s, 4, labels=[1, 2, 3, 4]).astype(float)
-
-    df["q_now"] = df.groupby(within)["y"].transform(q)
-    df["q_prev"] = df.groupby(within)["y_lag"].transform(q)
-    df = df.dropna(subset=["q_now", "q_prev"])
 
     table = pd.crosstab(df["q_prev"], df["q_now"], normalize="index")
     table.index.name = "predecessor quartile"
     table.columns.name = "successor quartile"
     return table
+
+
+def transition_counts(panel: pd.DataFrame, within: str = "vintage") -> pd.DataFrame:
+    """Cell counts behind `quartile_transitions`.
+
+    Proportions alone are unreadable at this sample size: a row reading
+    "50% stay top quartile" over four funds says nothing, and looks identical
+    to the same figure over four hundred.
+    """
+    df = _quartile_frame(panel, within)
+    if df.empty:
+        return pd.DataFrame()
+    table = pd.crosstab(df["q_prev"], df["q_now"])
+    table.index.name = "predecessor quartile"
+    table.columns.name = "successor quartile"
+    return table
+
+
+@dataclass
+class PermutationResult:
+    observed_diagonal: float
+    null_mean: float
+    null_sd: float
+    p_value: float
+    n_pairs: int
+    n_permutations: int
+    counts: pd.DataFrame
+
+    def as_row(self) -> dict:
+        return {
+            "observed_diagonal_share": round(self.observed_diagonal, 4),
+            "null_mean": round(self.null_mean, 4),
+            "null_sd": round(self.null_sd, 4),
+            "p_value": round(self.p_value, 4),
+            "n_pairs": self.n_pairs,
+        }
+
+
+def transition_permutation_test(
+    panel: pd.DataFrame,
+    within: str = "vintage",
+    n_permutations: int = 9999,
+    seed: int = 20240813,
+) -> PermutationResult:
+    """Is the transition matrix's diagonal heavier than chance?
+
+    Reading a quartile transition matrix by eye invites the classic error:
+    with four categories the diagonal holds 25% of the mass under pure noise,
+    and a table showing 31% looks like persistence to a reader who has not
+    worked out what independence would produce. At a hundred-odd pairs the
+    sampling error on that figure is several points wide.
+
+    The test shuffles successor quartiles *within vintage*, which preserves
+    both the number of pairs per vintage and the marginal distribution of
+    outcomes, and destroys only the pairing between a family's predecessor and
+    its successor. The null is therefore exactly "a GP's previous fund carries
+    no information about the next one", holding the vintage structure fixed.
+
+    Reported one-sided: the alternative of interest is more persistence than
+    chance, not merely a different arrangement.
+    """
+    df = _quartile_frame(panel, within)
+    if df.empty or len(df) < 4:
+        return PermutationResult(
+            np.nan, np.nan, np.nan, np.nan, len(df), 0, pd.DataFrame()
+        )
+
+    observed = float((df["q_prev"] == df["q_now"]).mean())
+
+    rng = np.random.default_rng(seed)
+    groups = [g["q_now"].to_numpy() for _, g in df.groupby(within, sort=False)]
+    previous = [g["q_prev"].to_numpy() for _, g in df.groupby(within, sort=False)]
+
+    null = np.empty(n_permutations)
+    for i in range(n_permutations):
+        hits = 0
+        for prev, succ in zip(previous, groups):
+            hits += int((prev == rng.permutation(succ)).sum())
+        null[i] = hits / len(df)
+
+    p_value = (1 + int((null >= observed).sum())) / (n_permutations + 1)
+    return PermutationResult(
+        observed_diagonal=observed,
+        null_mean=float(null.mean()),
+        null_sd=float(null.std(ddof=1)),
+        p_value=float(p_value),
+        n_pairs=len(df),
+        n_permutations=n_permutations,
+        counts=transition_counts(panel, within),
+    )
