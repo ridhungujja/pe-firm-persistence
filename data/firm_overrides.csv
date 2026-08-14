@@ -1,0 +1,139 @@
+firm_id_raw,firm_id_canonical,decision,confidence,reason
+# Hand-checked corrections to the output of normalise_firm_ids(), per README
+# roadmap step 2. Keyed on the RAW stem the regex produces, mapped to the
+# canonical family. Rows with decision=keep_separate are no-ops that record a
+# family was inspected and deliberately left alone, so a later pass does not
+# "helpfully" merge it.
+#
+# Rule applied: one row per fund the GP raised in a single continuing series.
+# Parallel share classes, annex funds, co-invest sleeves and continuation
+# vehicles are NOT sequence steps and are never merged into the flagship, even
+# when they carry the flagship's name and number.
+#
+# --- SPLIT SERIES: one series the regex scattered across several stems -------
+WCAS,WELSH CARSON ANDERSON & STOWE,merge,high,Firm's own acronym. XI/XII reported under the full name and XIII/XIV under the initials; the roman sequence is continuous across the break.
+INSIGHT VENTURE PARTNERS,INSIGHT PARTNERS,merge,high,Insight Venture Partners renamed to Insight Partners in 2019. Flagship sequence IX-X-XI-XII-XIII runs unbroken through the rename.
+PERMIRA EUROPE,PERMIRA,merge,high,Permira Europe I-III is the earlier name of the flagship; the series continued as Permira IV. Same strategy and team.
+PERMIRA IV LP2,PERMIRA,merge,high,"Trailing feeder-vehicle tag ""L.P.2"" blocked the numeral strip. Same fund as Permira IV."
+PERMIRA VI LP,PERMIRA,merge,high,"Trailing feeder tag ""L.P. 1"" blocked the numeral strip. Same fund as Permira VI."
+PERMIRA VII LP1,PERMIRA,merge,high,"Trailing feeder tag ""L.P.1"" blocked the numeral strip. Same fund as Permira VII."
+PERMIRA VIII-2 SCSP,PERMIRA,merge,high,"Luxembourg SCSp feeder ""VIII-2"" blocked the numeral strip. Same fund as Permira VIII."
+CVC EUROPEAN EQUITY PARTNERS,CVC CAPITAL PARTNERS,merge,high,CVC European Equity Partners is the earlier name of the European flagship; renumbered as CVC Capital Partners from fund VI. Sequence III-IX is continuous.
+CVC EUROPEAN EQUITY PARTNERS IV (D),CVC CAPITAL PARTNERS,merge,high,"Parenthetical share class ""(D)"" blocked the numeral strip. Same fund as CVC European Equity Partners IV."
+CVC EUROPEAN EQUITY PARTNERS V (B),CVC CAPITAL PARTNERS,merge,high,"Share class ""(B)"" blocked the numeral strip. Same fund as CVC European Equity Partners V."
+CVC CAPITAL PARTNERS VII (A),CVC CAPITAL PARTNERS,merge,high,"Share class ""(A)"" blocked the numeral strip."
+CVC CAPITAL PARTNERS VIII (A),CVC CAPITAL PARTNERS,merge,high,"Share class ""(A)"" blocked the numeral strip."
+CVC CAPITAL PARTNERS IX (A),CVC CAPITAL PARTNERS,merge,high,"Share class ""(A)"" blocked the numeral strip."
+CVC CAPITAL PARTNERS ASIA VI (A),CVC CAPITAL PARTNERS ASIA,merge,high,"Share class ""(A)"" blocked the numeral strip. Asia series stays separate from the European flagship."
+PERMIRA GROWTH OPPORTUNITIES I LP,PERMIRA GROWTH OPPORTUNITIES,merge,high,"Feeder tag ""L.P. 1"" blocked the numeral strip. Growth Opportunities is a separate strategy and stays out of the Permira flagship."
+PERMIRA GROWTH OPPORTUNITIES II SCSP,PERMIRA GROWTH OPPORTUNITIES,merge,high,SCSp suffix blocked the numeral strip.
+TRITON FUND 6 SCSP,TRITON FUND,merge,high,SCSp suffix blocked the strip and the GP switched from roman to arabic at fund 6. Same series as Triton Fund IV/V.
+KKR ASIAN FUND IV SCSP,KKR ASIAN FUND,merge,high,SCSp suffix blocked the numeral strip. Same series as KKR Asian Fund I/II.
+KKR EUROPEAN FUND V (USD) SCSP,KKR EUROPEAN FUND,merge,high,"Currency class ""(USD)"" and SCSp suffix blocked the strip. Same series as KKR European Fund III."
+CARLYLE EUROPE PARTNERS V SCSP,CARLYLE EUROPE PARTNERS,merge,high,SCSp suffix blocked the numeral strip. Same series as Carlyle Europe Partners II/III.
+TPG ASIA VIII (A),TPG ASIA,merge,high,"Share class ""(A)"" blocked the numeral strip. Same series as TPG Asia V."
+VIP V SCSP,VIP,merge,medium,SCSp suffix blocked the numeral strip. Sequence IV-V is continuous; the acronym is opaque in the CalPERS table so confirm the sponsor before publishing.
+ONEX PARTNERS V-B,ONEX PARTNERS,merge,high,"Feeder class ""V-B"" blocked the numeral strip. Same series as Onex Partners IV."
+THE RISE FUND (A),THE RISE FUND,merge,high,"Share class ""(A)"" blocked the numeral strip. Rise Fund I and III are one series."
+PRYSM CAPITAL FUND II-C,PRYSM CAPITAL FUND,merge,high,"Feeder class ""II-C"" blocked the numeral strip. Same series as Prysm Capital Fund I."
+57 STARS GLOBAL OPPORTUNITIES FUND 2 (CALPERS),57 STARS GLOBAL OPPORTUNITIES FUND,merge,high,"Parenthetical ""(CalPERS)"" blocked the numeral strip. Fund 2 of the same series."
+BDC III,BDC,merge,medium,"Trailing share-class letter ""C"" was itself consumed as roman numeral 100 leaving the fund number in the stem. BDC III/IV/V are one series."
+BDC IV D,BDC,merge,medium,"Share class ""D"" left the fund number in the stem. Same series as BDC III/V."
+BDC V,BDC,merge,medium,"Share class ""C"" consumed as a roman numeral left the fund number in the stem. Same series as BDC III/IV."
+BLACKSTONE TACTICAL OPPORTUNITIES FUND -,BLACKSTONE TACTICAL OPPORTUNITIES FUND,merge,high,"Share class ""- C"" left a dangling hyphen in the stem. This is Tactical Opportunities fund I."
+BLACKSTONE TACTICAL OPPORTUNITIES FUND II -,BLACKSTONE TACTICAL OPPORTUNITIES FUND,merge,high,"Share class ""II - C"" left a dangling hyphen in the stem. This is Tactical Opportunities fund II."
+BLACKSTONE TACTICAL OPPORTUNITIES FUND III-C,BLACKSTONE TACTICAL OPPORTUNITIES FUND,merge,high,"Hyphenated share class ""III-C"" blocked the numeral strip. This is Tactical Opportunities fund III."
+#
+# --- KEEP SEPARATE: inspected, and merging would pool distinct strategies ----
+BLACKSTONE TACTICAL OPPORTUNITIES FUND III-C (SURGE),BLACKSTONE TACTICAL OPPORTUNITIES FUND,merge,high,"""Surge"" is additional capital into Tactical Opportunities III, not a fourth fund. Merging it used to invent a sequence step; dedup now collapses it onto fund III on the (family, fund number) key and sums the commitments, which is the correct treatment."
+AACP INDIA INVESTORS B,AACP INDIA INVESTORS B,keep_separate,medium,India Investors B and C are share classes rather than consecutive funds. Merging them would invent a second sequence step for one commitment.
+INSIGHT PARTNERS XII BUYOUT ANNEX FUND,INSIGHT PARTNERS XII BUYOUT ANNEX FUND,keep_separate,high,Annex capital raised against Insight Partners XII. Not a fund in the flagship sequence.
+INSIGHT PARTNERS XIII GROWTH BUYOUT FUND,INSIGHT PARTNERS XIII GROWTH BUYOUT FUND,keep_separate,high,Sidecar to Insight Partners XIII. Not a fund in the flagship sequence.
+INSIGHT VENTURE PARTNERS GROWTH-BUYOUT COINVESTMENT FUND (B),INSIGHT VENTURE PARTNERS GROWTH-BUYOUT COINVESTMENT FUND (B),keep_separate,high,Co-investment vehicle. Merging it into the Insight flagship would double-count fund IX's vintage.
+GREEN EQUITY INVESTORS CF,GREEN EQUITY INVESTORS CF,keep_separate,high,Leonard Green co-invest programme. Distinct from the Green Equity Investors flagship series.
+SILVER LAKE TECHNOLOGY INVESTORS,SILVER LAKE TECHNOLOGY INVESTORS,keep_separate,high,Overage/mid-market vehicle distinct from the Silver Lake Partners flagship.
+FRANCISCO PARTNERS AGILITY,FRANCISCO PARTNERS AGILITY,keep_separate,high,Lower-mid-market strategy with its own numbering. Not the Francisco Partners flagship.
+CVC CAPITAL PARTNERS ASIA,CVC CAPITAL PARTNERS ASIA,keep_separate,high,Asian buyout series distinct from the European flagship despite the shared prefix.
+CVC CAPITAL PARTNERS STRATEGIC OPPORTUNITIES COMPOUNDING CAPITAL,CVC CAPITAL PARTNERS STRATEGIC OPPORTUNITIES COMPOUNDING CAPITAL,keep_separate,high,Long-hold strategy with separate economics.
+PERMIRA GROWTH OPPORTUNITIES,PERMIRA GROWTH OPPORTUNITIES,keep_separate,high,Growth equity strategy. Shares the Permira prefix but not the flagship series.
+PSG ENCORE,PSG ENCORE,keep_separate,high,Continuation/late-stage vehicle distinct from the PSG flagship.
+PSG EUROPE,PSG EUROPE,keep_separate,high,European fund with its own numbering.
+THRIVE CAPITAL PARTNERS VIII GROWTH,THRIVE CAPITAL PARTNERS VIII GROWTH,keep_separate,high,Thrive runs paired early-stage and growth vehicles per generation; the growth vehicle is not a step in the flagship sequence.
+THRIVE CAPITAL PARTNERS IX GROWTH,THRIVE CAPITAL PARTNERS IX GROWTH,keep_separate,high,Paired growth vehicle for generation IX.
+THRIVE CAPITAL PARTNERS OPPORTUNITY FUND,THRIVE CAPITAL PARTNERS OPPORTUNITY FUND,keep_separate,high,"Opportunity vehicle, separate strategy."
+CANAAN GOLD COAST,CANAAN GOLD COAST,keep_separate,high,"Named sidecar, not a numbered Canaan fund."
+CANAAN XIII HEALTHCARE FUND,CANAAN XIII HEALTHCARE FUND,keep_separate,high,"Sector sleeve alongside Canaan XIII, not a separate generation."
+KHOSLA VENTURES SEED,KHOSLA VENTURES SEED,keep_separate,high,Seed programme runs parallel to the main funds with its own numbering.
+ARSENAL CAPITAL PARTNERS GROWTH,ARSENAL CAPITAL PARTNERS GROWTH,keep_separate,high,"Growth strategy raised alongside Arsenal VI, not a successor to it."
+WIGMORE STREET (BDC III),WIGMORE STREET (BDC III),keep_separate,high,Co-investment vehicle that invests alongside BDC III. Merging into BDC would double-count.
+WIGMORE STREET BDC IV CO-INVESTMENT NO1,WIGMORE STREET BDC IV CO-INVESTMENT NO1,keep_separate,high,Co-investment vehicle alongside BDC IV. Merging into BDC would double-count.
+
+# --- SPLIT SERIES, second pass ----------------------------------------------
+# These have no clean unnumbered stem to act as the merge target: EVERY vintage
+# carries a share class or domicile suffix, so the series never collapses and
+# nothing looks like a duplicate. They are invisible to a prefix-similarity
+# check and are the largest single block of lost observations.
+ADVENT INTERNATIONAL GPE V-D,ADVENT INTERNATIONAL GPE,merge,high,"Share class ""-D"". Advent flagship V."
+ADVENT INTERNATIONAL GPE VI-A,ADVENT INTERNATIONAL GPE,merge,high,"Share class ""-A"". Advent flagship VI."
+ADVENT INTERNATIONAL GPE VII-C,ADVENT INTERNATIONAL GPE,merge,high,"Share class ""-C"". Advent flagship VII."
+ADVENT INTERNATIONAL GPE VIII-B LIMITED PARTNERSHIP,ADVENT INTERNATIONAL GPE,merge,high,"Share class ""-B"" plus spelled-out ""Limited Partnership"" which the entity-suffix rule does not recognise. Advent flagship VIII."
+ADVENT INTERNATIONAL GPE IX LIMITED PARTNERSHIP,ADVENT INTERNATIONAL GPE,merge,high,"Spelled-out ""Limited Partnership"" blocked the numeral strip. Advent flagship IX."
+ADVENT INTERNATIONAL GPE X LIMITED PARTNERSHIP,ADVENT INTERNATIONAL GPE,merge,high,"Spelled-out ""Limited Partnership"" blocked the numeral strip. Advent flagship X. Gives a clean V-VI-VII-VIII-IX-X sequence on distinct vintages."
+CERBERUS CAL II PARTNERS,CERBERUS CAL PARTNERS,merge,high,"The rule strips only one trailing entity token, so ""<name> <number> Partners"" never collapses. Same series as CAL III/IV."
+CERBERUS CAL III PARTNERS,CERBERUS CAL PARTNERS,merge,high,"Fund number sits before ""Partners"" and survives the strip."
+CERBERUS CAL IV PARTNERS,CERBERUS CAL PARTNERS,merge,high,"Fund number sits before ""Partners"" and survives the strip."
+FORBION VENTURES FUND VI COOPERATIEF UA,FORBION VENTURES FUND,merge,high,"Dutch ""Cooperatief U.A."" suffix is not in the entity-suffix list and blocked the numeral strip."
+FORBION VENTURES FUND VII COOPERATIEF UA,FORBION VENTURES FUND,merge,high,Same Cooperatief U.A. suffix. Series VI-VII.
+FORBION GROWTH OPPORTUNITIES FUND II COOPERATIEF UA,FORBION GROWTH OPPORTUNITIES FUND,merge,high,Cooperatief U.A. suffix. Growth Opportunities is a separate strategy from Forbion Ventures and stays out of it.
+FORBION GROWTH OPPORTUNITIES FUND III COOPERATIEF UA,FORBION GROWTH OPPORTUNITIES FUND,merge,high,Cooperatief U.A. suffix. Series II-III.
+TOWERBROOK INVESTORS IV (ONSHORE),TOWERBROOK INVESTORS,merge,high,Onshore/offshore feeder tag blocked the numeral strip. Flagship series IV-V-VI.
+TOWERBROOK INVESTORS V (ONSHORE),TOWERBROOK INVESTORS,merge,high,Onshore feeder tag blocked the numeral strip.
+TOWERBROOK INVESTORS VI (ONSHORE),TOWERBROOK INVESTORS,merge,high,Onshore feeder tag blocked the numeral strip.
+TOWERBROOK STRUCTURED OPPORTUNITIES FUND (ONSHORE),TOWERBROOK STRUCTURED OPPORTUNITIES FUND,merge,high,Onshore feeder tag. Structured Opportunities is a credit-like strategy and stays separate from TowerBrook Investors.
+TOWERBROOK STRUCTURED OPPORTUNITIES FUND II (ONSHORE),TOWERBROOK STRUCTURED OPPORTUNITIES FUND,merge,high,Onshore feeder tag blocked the numeral strip. Series I-II.
+EQT IX (NO2) USD SCSP,EQT,merge,high,"Feeder number ""(No.2)"" plus currency and SCSp suffixes blocked the strip. EQT flagship IX."
+EQT X (NO2) USD SCSP,EQT,merge,high,Same feeder/currency/SCSp suffixes. EQT flagship X.
+SUMMIT PARTNERS GROWTH EQUITY FUND X-A,SUMMIT PARTNERS GROWTH EQUITY FUND,merge,high,"Share class ""-A"" blocked the numeral strip. Series X-XI."
+SUMMIT PARTNERS GROWTH EQUITY FUND XI-A,SUMMIT PARTNERS GROWTH EQUITY FUND,merge,high,"Share class ""-A"" blocked the numeral strip."
+TA XIV-A,TA,merge,high,"Share class ""-A"" blocked the numeral strip. TA Associates flagship XIV."
+TA XV-A,TA,merge,high,"Share class ""-A"" blocked the numeral strip. TA Associates flagship XV."
+GENERAL CATALYST GROUP XI - HEALTH ASSURANCE,GENERAL CATALYST HEALTH ASSURANCE,merge,medium,General Catalyst raises one vehicle per strategy per generation. Health Assurance XI and XII are consecutive funds of the same strategy; the other XII sleeves are not.
+GENERAL CATALYST GROUP XII - HEALTH ASSURANCE,GENERAL CATALYST HEALTH ASSURANCE,merge,medium,Consecutive Health Assurance vehicle. Kept apart from Creation/Endurance/Ignition.
+GENSTAR X OPPORTUNITIES FUND,GENSTAR OPPORTUNITIES FUND,merge,medium,"Generation number sits before ""Opportunities Fund"" so the stem never collapses. Overage vehicles for Genstar X and XI form their own series and stay out of the Genstar Capital Partners flagship."
+GENSTAR XI OPPORTUNITIES FUND,GENSTAR OPPORTUNITIES FUND,merge,medium,Second overage vehicle in the same series.
+LIGHTSPEED VENTURE PARTNERS XIV-A (INCEPTION),LIGHTSPEED VENTURE PARTNERS INCEPTION,merge,medium,"Lightspeed pairs an ""Inception"" and an ""Ignite"" vehicle per generation. Inception XIV-A and XV-A are consecutive funds of one strategy."
+LIGHTSPEED VENTURE PARTNERS XV-A (INCEPTION),LIGHTSPEED VENTURE PARTNERS INCEPTION,merge,medium,Second Inception vehicle. Deliberately not merged with the Ignite line.
+LIGHTSPEED VENTURE PARTNERS XIV-B (IGNITE),LIGHTSPEED VENTURE PARTNERS IGNITE,merge,medium,Ignite is a distinct strategy from Inception; XIV-B and XV-B are its consecutive funds.
+LIGHTSPEED VENTURE PARTNERS XV-B (IGNITE),LIGHTSPEED VENTURE PARTNERS IGNITE,merge,medium,Second Ignite vehicle.
+#
+# --- KEEP SEPARATE, second pass ---------------------------------------------
+ADVENT GLOBAL TECHNOLOGY II LIMITED PARTNERSHIP,ADVENT GLOBAL TECHNOLOGY II LIMITED PARTNERSHIP,keep_separate,high,"Sector fund, not a step in the Advent International GPE flagship sequence."
+CERBERUS CP PARTNERS,CERBERUS CP PARTNERS,keep_separate,high,Distinct Cerberus vehicle; CP and CAL are different programmes.
+CERBERUS INSTITUTIONAL PARTNERS,CERBERUS INSTITUTIONAL PARTNERS,keep_separate,high,"Cerberus flagship, distinct from the CAL separate-account series."
+FORBION BIOECONOMY FUND I COOPERATIEF UA,FORBION BIOECONOMY FUND I COOPERATIEF UA,keep_separate,high,Third Forbion strategy. Left as-is because it has no sibling in this snapshot; will need a stem fix if a Fund II appears.
+GENERAL CATALYST GROUP XII - CREATION,GENERAL CATALYST GROUP XII - CREATION,keep_separate,high,Distinct strategy sleeve within generation XII.
+GENERAL CATALYST GROUP XII - ENDURANCE,GENERAL CATALYST GROUP XII - ENDURANCE,keep_separate,high,Distinct strategy sleeve within generation XII.
+GENERAL CATALYST GROUP XII - IGNITION,GENERAL CATALYST GROUP XII - IGNITION,keep_separate,high,Distinct strategy sleeve within generation XII.
+TA SELECT OPPORTUNITIES FUND II-A,TA SELECT OPPORTUNITIES FUND II-A,keep_separate,high,"Select Opportunities is a separate TA strategy, not a flagship fund."
+LIGHTSPEED VENTURE PARTNERS SELECT,LIGHTSPEED VENTURE PARTNERS SELECT,keep_separate,high,"Growth-stage line, distinct from Inception and Ignite."
+LIGHTSPEED OPPORTUNITY FUND,LIGHTSPEED OPPORTUNITY FUND,keep_separate,high,"Opportunity line, distinct from the venture funds."
+HG GENESIS 10 A,HG GENESIS 10 A,keep_separate,high,"Hg runs Genesis, Mercury and Saturn as separate size-banded strategies. Merging on the Hg prefix would pool three different teams."
+HG MERCURY 4 A,HG MERCURY 4 A,keep_separate,high,Distinct Hg strategy.
+HG SATURN 3 A,HG SATURN 3 A,keep_separate,high,Distinct Hg strategy.
+MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP,MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP,keep_separate,high,Select is a separate line from the numbered Mayfield funds.
+BALDERTON CAPITAL GROWTH II SLP,BALDERTON CAPITAL GROWTH II SLP,keep_separate,high,"Growth line, distinct from the numbered Balderton venture funds."
+GENSTAR CAPITAL PARTNERS,GENSTAR CAPITAL PARTNERS,keep_separate,high,Flagship series X-XI. Kept apart from the Genstar Opportunities overage vehicles.
+#
+# --- SHARE CLASSES: merged now that dedup collapses them ---------------------
+# Bridgepoint Europe is one series reported as five rows: III appears twice
+# ('C' and 'D' classes) and IV twice ('B' and 'D'). Merging the stems alone
+# would have invented two sequence steps, and CalPERS stamps the two 2015 rows
+# with a vintage that contradicts the fund number (Europe III is a 2005 fund,
+# IV a 2008 fund). deduplicate_share_classes now collapses each pair on
+# (family, fund number) and keeps the earliest vintage, which both removes the
+# duplicate rows and discards the mis-stamped dates. Safe to merge.
+BRIDGEPOINT EUROPE III 'C',BRIDGEPOINT EUROPE,merge,high,"Share class 'C' of Bridgepoint Europe III. Collapses with the 'D' class; its 2015 vintage stamp is the LP's commitment date and loses to the 2005 fund vintage."
+BRIDGEPOINT EUROPE III 'D',BRIDGEPOINT EUROPE,merge,high,Share class 'D' of Bridgepoint Europe III (2005).
+BRIDGEPOINT EUROPE IV 'B',BRIDGEPOINT EUROPE,merge,high,"Share class 'B' of Bridgepoint Europe IV. Collapses with the 'D' class; its 2015 stamp loses to the 2008 fund vintage."
+BRIDGEPOINT EUROPE IV 'D',BRIDGEPOINT EUROPE,merge,high,Share class 'D' of Bridgepoint Europe IV (2008).
+BRIDGEPOINT EUROPE VII D,BRIDGEPOINT EUROPE,merge,high,Bridgepoint Europe VII (2024). Single class in this snapshot.

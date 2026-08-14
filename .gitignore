@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Generated analysis outputs. All of these are rebuilt by the analysis scripts
+# from committed inputs, so they are artefacts rather than data.
+# ---------------------------------------------------------------------------
+data/calpers_snapshot.csv
+data/family_review.csv
+data/fund_metrics.csv
+data/persistence_results.csv
+data/share_class_dedup.csv
+data/vintage_anomalies.csv
+data/oregon_pme.csv
+
+# Re-downloadable from the Kenneth French Data Library.
+data/benchmarks/
+
+# ---------------------------------------------------------------------------
+# Deliberately NOT ignored
+# ---------------------------------------------------------------------------
+# data/firm_overrides.csv  - a hand-made input, not an output. Every merge and
+#   keep-separate decision in it was checked by hand and cannot be regenerated.
+#
+# data/snapshots/          - the archive is the asset. Oregon rotates old
+#   quarters off its site (8 of 52 probed URLs were still live), so a dated
+#   snapshot that is lost cannot be re-fetched, and two or more snapshots are
+#   what make cash-flow reconstruction and PME possible at all.
