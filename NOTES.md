@@ -502,3 +502,29 @@ a real assertion rather than a formality — if the family mapping ever starts
 driving the estimate, it fails.
 
 Tests: 181 → 191.
+
+---
+
+## 9. RESULTS.md — done
+
+Drafted after the numbers existed, not before. 1,279 words excluding tables,
+slightly over the 800–1,200 target; I stopped trimming because every remaining
+paragraph carries content the brief asked for by name (six limitations, five
+robustness checks, both flavours of inference). Cutting further would have
+meant dropping required material to hit a word count.
+
+Structure: estimand and why families → data and funnel → specification table →
+inference → robustness → limitations in priority order → conclusion.
+
+**The conclusion says the interval includes zero, plainly, in the first two
+lines.** It then argues why that is a finding rather than a failure: it is what
+the post-2000 literature predicts, and the same data yields a
+decisive-looking 0.390 under the loose specification, so the gap between 0.390
+and 0.214 is the methodological content.
+
+Direction of bias is stated wherever it is known — stale marks attenuate toward
+zero, outcome censoring cuts beta 37% in simulation while regressor truncation
+leaves OLS consistent — and stated as unknown where it is (active-partnerships
+selection).
+
+Nothing in it is asserted that is not in a committed CSV.
