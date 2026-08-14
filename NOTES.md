@@ -467,3 +467,38 @@ estimator recovers known persistence before it is pointed at real data.
 
 Figures are committed rather than gitignored — they are a deliverable the
 reader sees, not an intermediate artefact, and they total ~350KB.
+
+---
+
+## 8. Reproducibility harness — done
+
+`./run_all.sh` runs tests → fetch both plans → family review → persistence
+estimates → overlap → PME → simulation validation → figures.
+
+`./run_all.sh --offline` skips only the two network fetches and analyses the
+cached archive. Verified end to end: it reproduces beta = 0.2142 exactly.
+
+**Why --offline is the important half.** The archive is the reproducible part
+and the network is not. Oregon rotates old quarters off its site and CalPERS
+publishes only the current table, so an online run six months from now
+silently analyses a different sample and produces different numbers with no
+warning. Offline mode pins the result to the committed archive.
+
+`tests/test_repro.py`, 10 tests. Determinism for OLS, the bootstrap, both
+permutation tests, and leave-one-out. Two are worth calling out:
+
+- **A converse check on the seed.** Asserting two runs match is satisfied just
+  as well by a resampler that never reaches the seed at all. So there is also
+  a test that two *different* seeds produce different null draws while leaving
+  the observed statistic unchanged. Without it the determinism test could pass
+  for the wrong reason.
+- **Row-order invariance.** Reading the same CSV elsewhere can return rows in
+  a different order; the coefficient must not care. It does not.
+
+Plus three tests on the shipped tables: all seven specification rows present
+and estimated, exactly one row labelled headline, and all three mapping
+regimes estimated with beta spread below one standard error. That last one is
+a real assertion rather than a formality — if the family mapping ever starts
+driving the estimate, it fails.
+
+Tests: 181 → 191.

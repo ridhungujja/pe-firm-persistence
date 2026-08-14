@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#
+# Full path from raw data to every table and figure.
+#
+#   ./run_all.sh              refresh both plans from the web, then analyse
+#   ./run_all.sh --offline    analyse from the cached snapshot archive only
+#
+# --offline exists because the archive is the reproducible part and the network
+# is not. Oregon rotates old quarters off its site and CalPERS publishes only
+# the current table, so a run six months from now would silently analyse a
+# different sample. Offline mode reproduces the committed results exactly.
+#
+# Every random procedure is seeded (bootstrap, permutation tests, simulation),
+# so two runs on the same archive produce identical numbers. tests/test_repro.py
+# asserts that.
+
+set -euo pipefail
+
+OFFLINE=0
+for arg in "$@"; do
+  case "$arg" in
+    --offline) OFFLINE=1 ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    *) echo "unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
+
+cd "$(dirname "$0")"
+
+if [ -d .venv ]; then
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+fi
+
+step() { printf '\n\033[1m=== %s\033[0m\n' "$1"; }
+
+step "Tests"
+python -m pytest -q
+
+if [ "$OFFLINE" -eq 1 ]; then
+  step "Offline mode: skipping network fetches"
+  if [ ! -f data/calpers_raw.csv ]; then
+    echo "data/calpers_raw.csv missing; run once without --offline first" >&2
+    exit 1
+  fi
+  if ! ls data/snapshots/oregon_*.csv >/dev/null 2>&1; then
+    echo "no Oregon snapshots cached; run once without --offline first" >&2
+    exit 1
+  fi
+  echo "using $(ls data/snapshots/oregon_*.csv | wc -l | tr -d ' ') Oregon snapshots"
+else
+  step "Fetch CalPERS"
+  python analysis/fetch_calpers.py
+
+  step "Fetch Oregon PERS archive"
+  python analysis/fetch_oregon.py
+fi
+
+step "Family-matching review"
+python analysis/build_family_review.py
+
+step "Persistence estimates (headline output)"
+python analysis/run_real_analysis.py
+
+step "Cross-plan measurement error"
+python analysis/run_overlap.py
+
+step "PME from the snapshot archive"
+python analysis/run_pme.py
+
+step "Validation on simulated data"
+python analysis/run_analysis.py
+
+step "Figures"
+python analysis/make_figures.py
+
+step "Done"
+echo "Tables  -> data/*.csv"
+echo "Figures -> figures/*.png"
+echo "Notes   -> NOTES.md"

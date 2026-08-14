@@ -9,3 +9,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "analysis"))
+
+
+import pytest
+
+
+@pytest.fixture(scope="session")
+def repo_data():
+    """The repository's data directory, for tests that check shipped tables."""
+    return Path(__file__).resolve().parents[1] / "data"
