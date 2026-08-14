@@ -1,4 +1,7 @@
-# NOTES.md — overnight run
+# DEVELOPMENT_LOG.md
+
+Running record of the work, in order. Judgement calls, surprises, and
+anything that looked wrong.
 
 Running log from the unattended queue. Judgement calls, surprises, and
 anything that looked wrong. Morning summary at the bottom.
@@ -1098,3 +1101,43 @@ full-sample λ as its headline. Item 9 investigates Tailwind and may remove the
 pair outright, in which case the full-sample figure *becomes* 0.98 and no
 sensitivity framing is needed. Reconciling the script before knowing that
 outcome would mean doing it twice.
+
+---
+
+## Item 8. Repo organisation — done
+
+Root is now exactly: `README.md`, `RESULTS.md`, `DEVELOPMENT_LOG.md`,
+`CLAUDE.md`, `run_all.sh`, `pyproject.toml`, `requirements.txt`, and five
+folders (`analysis/`, `data/`, `figures/`, `src/`, `tests/`).
+
+`WORK_BRIEF.md`, `OVERNIGHT_QUEUE.md` and `DATA_SOURCES.md` moved to
+`.project/`. They are instructions to the assistant, not deliverables, and a
+reader landing on the repo should not meet a task queue before the result.
+`NOTES.md` renamed `DEVELOPMENT_LOG.md` and given a proper header.
+
+**Before moving DATA_SOURCES, the genuinely useful half was folded into a new
+README "Data" section** — it documented things a reader needs and nothing else
+recorded:
+
+- The Oregon URL problem. Five naming conventions for the same quarterly
+  report, one filed under the wrong year's folder, and the finding that
+  templating gets 8 reports where reading the holdings page gets 18. This is
+  the reason `fetch_oregon.py` discovers rather than constructs URLs, and it
+  was previously written down only in a file about to be hidden.
+- Why the archive is committed: Oregon rotates quarters off the site, and two
+  dated snapshots are the only route to cash flows.
+- The French benchmark: why a total-return series rather than an S&P price
+  index (roughly two points a year of dividends, ~22% of terminal wealth over
+  a ten-year fund life), the `-99`/`-99.99` missing codes that destroy a
+  compounded series if read literally, and the Korteweg-Nagel point that the
+  market factor is not the right risk benchmark for levered buyout portfolios.
+- CalPERS' active-partnerships-only selection and its two-quarter reporting lag.
+
+Also: `run_all.sh` now points at `DEVELOPMENT_LOG.md`, README's footer links to
+it, and `.DS_Store` / `.Rhistory` are gitignored — both were sitting untracked
+in the root.
+
+Cross-references checked: the only remaining mentions of the moved files are
+inside `.project/` itself, plus two comments in `test_repro.py` citing "WORK
+BRIEF 2.2" as the origin of the seven specification rows, which is still an
+accurate historical reference.

@@ -77,4 +77,4 @@ python analysis/make_figures.py
 step "Done"
 echo "Tables  -> data/*.csv"
 echo "Figures -> figures/*.png"
-echo "Notes   -> NOTES.md"
+echo "Log     -> DEVELOPMENT_LOG.md"

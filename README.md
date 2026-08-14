@@ -116,6 +116,79 @@ aggregate** — averaging fund IRRs answers a different question from pooling
 cash flows, so the scripts report equal-weighted against capital-weighted PME
 to keep the gap visible.
 
+## Data
+
+Two public pension plans, both free and both published under state disclosure
+law. Between them they give 462 CalPERS funds, 18 quarterly Oregon snapshots,
+and 43 funds observed in both at the same reporting date.
+
+### CalPERS — HTML, current quarter only
+
+One table, refreshed quarterly with roughly a two-quarter reporting lag
+(general partners have 120 days to deliver financials). The page carries its
+own as-of date in prose, which the adapter parses — using the download date
+instead silently misaligns the table against any other plan. Only *active*
+partnerships appear; fully exited funds are removed, which is the sample's
+most important selection problem.
+
+### Oregon PERS — quarterly PDFs, five years of archive
+
+Oregon publishes its private equity book as a PDF each quarter and leaves past
+quarters online. **The URLs cannot be built from a template.** Oregon has used
+at least five naming conventions for the same report —
+
+```
+OPERF-Private-Equity-Portfolio-Quarter-1-2021.pdf
+OPERF-Private-Equity-Q2-2022.pdf
+PrivateEquity-Q3-2023.pdf
+OPERF_Private_Equity_Portfolio_-_Quarter_4_2023.pdf
+OPERF-Private-Equity-Portfolio-Quarter-4-2025.pdf   ← filed under /2026/
+```
+
+— and files at least one report in the folder for the wrong year. Probing the
+current pattern across 2014–2026 found 8 reports; reading the links off the
+[Treasury holdings page](https://www.oregon.gov/treasury/invested-for-oregon/Pages/Performance-Holdings.aspx)
+found 18. `fetch_oregon.py` therefore discovers reports rather than guessing
+URLs, and takes the year from the filename, not the folder.
+
+The archive spans 2021-03-31 to 2026-03-31. It is committed to this repository
+because Oregon rotates old quarters off the site, so a lost snapshot cannot be
+re-fetched — and because two or more dated snapshots of the same funds are the
+only route to cash flows, both plans publishing cumulative totals rather than
+dated flows.
+
+Oregon's report also carries an explicit warning from the plan itself that its
+IRRs "SHOULD NOT be used to assess the investment success of a partnership or
+to compare returns across partnerships" and "HAVE NOT been approved by the
+individual general partners". That is a primary-source statement of the
+measurement problem and it is quoted in `ingest/oregon.py`.
+
+### Benchmark — Kenneth French market factor
+
+PME discounts cash flows by a public-market index, so the index is the
+counterfactual the statistic is built on, not a formatting choice.
+
+```
+https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip
+```
+
+Market total return is `Mkt-RF + RF`, compounded into a level series. Three
+reasons for this over an S&P 500 price series: it is a **total** return, and a
+price index omits roughly two points a year of dividends, which compounds to
+about 22% of terminal wealth over a ten-year fund life and inflates every PME
+by that margin; it covers the whole US market rather than large caps; and it is
+the standard benchmark in the PME literature, so estimates here are comparable
+to published ones.
+
+Missing months are coded `-99` or `-99.99`. They must become NaN before
+compounding — read literally, one such month multiplies the running level by
+−0.98 and destroys every value after it. `french.py` refuses to compound
+through a gap rather than returning a silently truncated series.
+
+Buyout portfolios are levered and tilted toward smaller, cheaper companies, so
+the market factor is not their correct risk benchmark; `load_factors` returns
+the size and value factors too, so a second benchmark is cheap to build.
+
 ## What is implemented
 
 **Measurement** (`src/pefund/metrics.py`) — DPI, RVPI, TVPI, XIRR on irregular
@@ -140,7 +213,8 @@ snapshots. Adapters: `calpers.py` (HTML), `oregon.py` (PDF), `french.py`
 `run_overlap.py`, `run_pme.py`, `run_analysis.py`, `make_figures.py`.
 
 Data conventions, the family-matching rules, and the override schema are in
-[CLAUDE.md](CLAUDE.md); data sources in [DATA_SOURCES.md](DATA_SOURCES.md).
+[CLAUDE.md](CLAUDE.md). The development log, including every judgement
+call made and the reasoning behind it, is [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
 
 ## Known limitations
 
