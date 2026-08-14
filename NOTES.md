@@ -850,3 +850,40 @@ Advent pairs are being silently lost from the cross-plan sample. Carried into
 item 9.
 
 Tests: 200 → 212.
+
+---
+
+## Item 3. VIP override — verified, upgraded to high confidence
+
+The row's own reason said "confirm the sponsor before publishing", which is
+not something to ship. Confirmed against Oregon PERS, which lists the same two
+funds under their full name.
+
+| | CalPERS | Oregon |
+|---|---|---|
+| fund IV name | VIP IV LP | Vitruvian Investment Partnership IV |
+| fund IV vintage | 2020 | 2020 |
+| fund IV TVPI | 1.378637 | 1.373163 |
+| fund IV net IRR | 0.110 | 0.109 |
+| fund V name | VIP V S.C.Sp. | Vitruvian Investment Partnership V |
+| fund V TVPI | **0.974435** | **0.974642** |
+| fund V net IRR | not reported | not reported |
+
+**VIP is Vitruvian Investment Partnership.** The fund V multiples agree to
+0.02% and fund IV to 0.4%; both plans put fund IV at vintage 2020 and both
+decline to report a fund V IRR. Two unrelated partnerships do not agree on a
+multiple to four decimals. The SCSp form matches Vitruvian's Luxembourg
+domicile, as the queue suspected. CalPERS holds no other fund whose name
+contains "Vitruvian", so there is no competing candidate.
+
+Upgraded `medium` → `high` with the evidence written into the reason field.
+The estimate does not move: VIP contributes one lagged pair either way, and it
+was already being merged.
+
+Incidental: CalPERS dates fund V to 2023 and Oregon to 2022 — another instance
+of the +1 vintage disagreement pattern, relevant to items 4 and 5.
+
+**11 medium-confidence merges remain** (BDC ×3, General Catalyst Health
+Assurance ×2, Genstar Opportunities ×2, Lightspeed Inception/Ignite ×4). None
+carries a "confirm before publishing" caveat; they are judgement calls about
+whether paired vehicles form one series, stated as such.

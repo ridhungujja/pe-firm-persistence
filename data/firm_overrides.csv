@@ -32,7 +32,7 @@ KKR ASIAN FUND IV SCSP,KKR ASIAN FUND,merge,high,SCSp suffix blocked the numeral
 KKR EUROPEAN FUND V (USD) SCSP,KKR EUROPEAN FUND,merge,high,"Currency class ""(USD)"" and SCSp suffix blocked the strip. Same series as KKR European Fund III."
 CARLYLE EUROPE PARTNERS V SCSP,CARLYLE EUROPE PARTNERS,merge,high,SCSp suffix blocked the numeral strip. Same series as Carlyle Europe Partners II/III.
 TPG ASIA VIII (A),TPG ASIA,merge,high,"Share class ""(A)"" blocked the numeral strip. Same series as TPG Asia V."
-VIP V SCSP,VIP,merge,medium,SCSp suffix blocked the numeral strip. Sequence IV-V is continuous; the acronym is opaque in the CalPERS table so confirm the sponsor before publishing.
+VIP V SCSP,VIP,merge,high,"SCSp suffix blocked the numeral strip. Sponsor confirmed as Vitruvian Investment Partnership by cross-referencing Oregon PERS, which lists the same two funds under their full name: TVPI agrees to four decimals on fund V (CalPERS 0.974435 vs Oregon 0.974642) and to 0.4% on fund IV (1.3786 vs 1.3732), both plans report fund IV at vintage 2020, and both leave fund V IRR unreported. The SCSp form matches Vitruvian Luxembourg domicile."
 ONEX PARTNERS V-B,ONEX PARTNERS,merge,high,"Feeder class ""V-B"" blocked the numeral strip. Same series as Onex Partners IV."
 THE RISE FUND (A),THE RISE FUND,merge,high,"Share class ""(A)"" blocked the numeral strip. Rise Fund I and III are one series."
 PRYSM CAPITAL FUND II-C,PRYSM CAPITAL FUND,merge,high,"Feeder class ""II-C"" blocked the numeral strip. Same series as Prysm Capital Fund I."
