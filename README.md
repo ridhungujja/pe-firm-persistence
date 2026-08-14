@@ -62,7 +62,7 @@ supervisor wants to see. A returns calculator demonstrates none of it.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q          # 191 tests
+python -m pytest -q          # 224 tests
 ./run_all.sh --offline       # reproduce every table and figure from the cached archive
 ```
 
@@ -214,8 +214,8 @@ snapshots. Adapters: `calpers.py` (HTML), `oregon.py` (PDF), `french.py`
 `run_overlap.py`, `run_pme.py`, `run_analysis.py`, `make_figures.py`.
 
 Data conventions, the family-matching rules, and the override schema are in
-[CLAUDE.md](CLAUDE.md). The development log, including every judgement
-call made and the reasoning behind it, is [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
+[CLAUDE.md](CLAUDE.md). Design decisions and the reasoning behind them are in
+[DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
 
 ## Known limitations
 
