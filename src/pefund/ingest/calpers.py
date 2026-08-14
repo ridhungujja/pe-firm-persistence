@@ -37,6 +37,9 @@ whether to include them stays visible in the analysis code.
 
 from __future__ import annotations
 
+import re
+import urllib.request
+
 import pandas as pd
 
 CALPERS_URL = (
@@ -56,6 +59,13 @@ RENAMES = {
 }
 
 
+def fetch_page(url: str = CALPERS_URL) -> str:
+    """Raw HTML of the performance page."""
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        return response.read().decode("utf-8", "ignore")
+
+
 def fetch_raw(url: str = CALPERS_URL) -> pd.DataFrame:
     """Read the performance table straight off the page.
 
@@ -66,6 +76,34 @@ def fetch_raw(url: str = CALPERS_URL) -> pd.DataFrame:
     if not tables:
         raise ValueError(f"no tables found at {url}")
     return max(tables, key=lambda t: t.shape[1])
+
+
+#: "As of September 30, 2025" in the page's prose. CalPERS does not put the
+#: reporting date in the table itself.
+_AS_OF = re.compile(
+    r"[Aa]s of\s+((?:January|February|March|April|May|June|July|August|September"
+    r"|October|November|December)\s+\d{1,2},?\s+\d{4})"
+)
+
+
+def parse_as_of(html: str) -> pd.Timestamp | None:
+    """Reporting date of the table, read from the page.
+
+    This matters well beyond labelling. Comparing a fund's NAV across two
+    plans is only a measurement-error comparison if both reports describe the
+    same quarter; align them wrongly and the difference is NAV drift over
+    time, which would put a growth rate into an attenuation correction. The
+    download date is not a substitute -- CalPERS publishes with roughly a
+    two-quarter lag, so today's file describes a quarter that ended months
+    ago.
+    """
+    match = _AS_OF.search(html)
+    if not match:
+        return None
+    try:
+        return pd.Timestamp(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
 
 
 def _money(series: pd.Series) -> pd.Series:
@@ -140,7 +178,24 @@ def parse(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def load(url: str = CALPERS_URL, as_of: str | None = None) -> pd.DataFrame:
-    """Fetch, parse, and stamp a reporting date."""
+    """Fetch, parse, and stamp the table's own reporting date.
+
+    The reporting date is read from the page rather than set to today. Falling
+    back to the download date would silently misalign this table against any
+    other plan's, and every cross-plan comparison downstream depends on the
+    two describing the same quarter.
+    """
     out = parse(fetch_raw(url))
-    out["as_of"] = pd.Timestamp(as_of) if as_of else pd.Timestamp.today().normalize()
+    if as_of is not None:
+        out["as_of"] = pd.Timestamp(as_of)
+        return out
+
+    reported = parse_as_of(fetch_page(url))
+    if reported is None:
+        raise ValueError(
+            "could not find the reporting date on the CalPERS page. Pass "
+            "as_of= explicitly rather than letting it default to today: a "
+            "download date would misalign this table against other plans."
+        )
+    out["as_of"] = reported
     return out

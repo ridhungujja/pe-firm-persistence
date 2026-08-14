@@ -112,3 +112,66 @@ class TestPmeEligibility:
     def test_missing_columns_raise(self):
         with pytest.raises(ValueError, match="need columns"):
             funds_observed_from_inception(pd.DataFrame({"fund_id": ["a"]}))
+
+
+class TestAttenuation:
+    """Validation path: recover a known reliability ratio.
+
+    The attenuation factor is only worth reporting if it returns the right
+    answer when the error variance is known by construction, so these tests
+    build two noisy reports of a known truth and check lambda comes back.
+    """
+
+    @staticmethod
+    def _reports(sd_true, sd_error, n=4000, seed=3):
+        rng = np.random.default_rng(seed)
+        truth = rng.normal(0, sd_true, n)
+        return (
+            truth + rng.normal(0, sd_error, n),
+            truth + rng.normal(0, sd_error, n),
+        )
+
+    def test_recovers_a_known_lambda(self):
+        from run_overlap import attenuation
+
+        sd_true, sd_error = 0.30, 0.10
+        expected = sd_true**2 / (sd_true**2 + sd_error**2)
+        result = attenuation(*self._reports(sd_true, sd_error))
+        assert result["lambda"] == pytest.approx(expected, abs=0.03)
+
+    def test_error_variance_is_half_the_difference_variance(self):
+        from run_overlap import attenuation
+
+        sd_error = 0.20
+        result = attenuation(*self._reports(0.4, sd_error))
+        assert result["var_error"] == pytest.approx(sd_error**2, rel=0.15)
+
+    def test_noiseless_reports_give_lambda_one(self):
+        from run_overlap import attenuation
+
+        rng = np.random.default_rng(1)
+        truth = rng.normal(0, 0.3, 500)
+        result = attenuation(truth, truth)
+        assert result["lambda"] == pytest.approx(1.0, abs=1e-9)
+        assert result["var_error"] == pytest.approx(0.0, abs=1e-12)
+
+    def test_more_noise_lowers_lambda(self):
+        from run_overlap import attenuation
+
+        quiet = attenuation(*self._reports(0.3, 0.05))
+        loud = attenuation(*self._reports(0.3, 0.30))
+        assert quiet["lambda"] > loud["lambda"]
+
+    def test_lambda_never_exceeds_one(self):
+        from run_overlap import attenuation
+
+        for sd_error in (0.01, 0.1, 0.5, 1.0):
+            result = attenuation(*self._reports(0.3, sd_error))
+            assert 0.0 <= result["lambda"] <= 1.0
+
+    def test_correction_inflates_beta(self):
+        from run_overlap import attenuation
+
+        result = attenuation(*self._reports(0.3, 0.15))
+        beta_raw = 0.2
+        assert beta_raw / result["lambda"] > beta_raw

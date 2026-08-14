@@ -316,3 +316,113 @@ inception-observable funds and ages the existing ones. The 2021 vintages in
 this sample reach year seven or eight around 2028-29, at which point a
 realised-versus-marked comparison becomes possible with a real n. The
 machinery is built and tested; it needs time, not code.
+
+---
+
+## 6. CalPERS/Oregon overlap — done. Read the caveat before the number.
+
+`analysis/run_overlap.py` → `data/overlap_pairs.csv`, `data/attenuation.csv`.
+
+### A real bug found and fixed on the way in
+
+**The CalPERS adapter was stamping `as_of` with today's date.** `load()` did
+`pd.Timestamp.today()`, because the table has no date column. The reporting
+date is in the page's prose — "As of September 30, 2025" — and the parser
+never read it.
+
+That made alignment impossible in exactly the way this task warns about: the
+snapshot was labelled 2026-08-13 when it describes the quarter ending
+2025-09-30, nearly a year earlier. Comparing it against any Oregon quarter
+would have measured NAV growth and called it reporting error. `parse_as_of()`
+now reads the date from the page, and `load()` raises rather than falling back
+to today if it cannot find one.
+
+Side effect: the archived snapshot `calpers_2026-08-13.csv` was misnamed and
+has been replaced by `calpers_2025-09-30.csv`. The old file is deleted in this
+commit — it is the same data under a wrong date, not a lost observation.
+
+### Alignment
+
+Both plans describe the quarter ending **2025-09-30**. 43 pairs matched on
+(family stem, fund number), 9.6% of the smaller plan.
+
+Matching uses the raw regex stem, not the override-corrected family id: the
+overrides were hand-checked against CalPERS spellings, and applying them to
+Oregon's slightly different names would map one side and not the other,
+destroying matches rather than creating them.
+
+### How far apart are two reports of the same fund?
+
+| | |
+|---|---|
+| correlation of log TVPI across plans | 0.944 |
+| median absolute difference | 1.41% |
+| 90th percentile | 10.71% |
+| largest | 68.30% |
+
+The largest is Tailwind Capital Partners III: CalPERS 1.693, Oregon 1.006.
+I have not been able to explain that one and it is worth a look — a 68% gap on
+the same partnership is not fee terms. Candidates are a secondary purchase by
+one plan, materially different close dates, or a genuine matching error where
+the two plans hold different vehicles under one name. **Flagged as low
+confidence.**
+
+### An unexpected finding: the plans disagree on vintage year
+
+**18 of 43 pairs assign different vintage years to the same fund.** The
+disagreement is systematic, never random in sign:
+
+| CalPERS minus Oregon | pairs |
+|---|---|
+| 0 | 25 |
+| +1 | 14 |
+| +2 | 4 |
+
+CalPERS always dates a fund the same or later, never earlier. The natural
+reading is that CalPERS records the year of its own first capital call while
+Oregon records the fund's vintage, which would also explain why
+vintage-disagreeing pairs have double the median reporting gap (0.0162 vs
+0.0081 in logs) — the plans entered at different closes.
+
+**This matters beyond this task.** Vintage fixed effects are the main control
+in the specification table, and this says the vintage label itself carries
+error of about a year for 40% of funds. Not fixable with the data available,
+but it belongs in the limitations and I have not seen it discussed in the
+project so far.
+
+### Attenuation
+
+| | lambda | n |
+|---|---|---|
+| all aligned pairs | **0.944** [0.828, 0.990] | 43 |
+| excluding the single largest gap | 0.981 | 42 |
+| vintage-agreeing pairs only | 0.980 | 25 |
+
+    beta raw        0.2142
+    beta corrected  0.2269   [0.2164, 0.2586] from the lambda interval
+    correction      1.059x
+
+Both sensitivities push lambda toward 0.98, i.e. a correction of ~1.02x rather
+than 1.06x. So the headline correction is itself driven mostly by the one
+unexplained outlier. The honest summary: **the correction is small, between
+1.02x and 1.06x, and does not change any conclusion.**
+
+### The caveat that matters more than the number
+
+This is a **floor**, and the reason is structural. Both plans are LPs in the
+same partnership receiving the same GP-reported valuation. They are not
+independent appraisals. What differs between them is fee terms negotiated at
+different closes, entry timing, each plan's own share, and rounding — CalPERS
+reports whole dollars, Oregon reports millions to one decimal.
+
+The error that actually matters for persistence — that GP carrying values are
+stale and smoothed relative to what the assets would fetch — is *common to
+both reports* and cancels exactly in the difference. So the true attenuation
+is larger than 1.06x by an unknown amount, and overlap data cannot bound it.
+The corrected beta above should be read as "the correction is at least this
+big", never as the corrected truth.
+
+Validation: `attenuation()` has tests recovering a known lambda from simulated
+reports with a known error variance (0.30/0.10 → 0.90, recovered to ±0.03).
+
+Tests: 175 → 181.
