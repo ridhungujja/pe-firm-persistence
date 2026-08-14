@@ -7,6 +7,14 @@ persistence in a naive regression is selection, look-ahead, or vintage
 effects wearing a GP's clothes.
 
 Run with:  python analysis/run_analysis.py
+
+Produces:
+    data/fund_metrics.csv          per-fund metrics for the simulated universe
+    data/persistence_results.csv   the seven simulated specifications
+
+Nothing here touches real data. This is the validation path: because the
+simulated world has a known skill process, every estimate can be checked
+against the truth before the same code is pointed at a pension plan.
 """
 
 from __future__ import annotations

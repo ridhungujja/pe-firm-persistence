@@ -19,6 +19,19 @@ data/persistence_results.csv
 data/share_class_dedup.csv
 data/vintage_anomalies.csv
 data/oregon_pme.csv
+data/calpers_raw.csv
+data/real_specifications.csv
+data/all_specifications.csv
+data/robustness_rows.csv
+data/mapping_robustness.csv
+data/transition_test.csv
+data/transition_counts.csv
+data/leave_one_family_out.csv
+data/leave_one_vintage_out.csv
+data/spearman_within.csv
+data/simulation_validation.csv
+data/overlap_pairs.csv
+data/attenuation.csv
 
 # Re-downloadable from the Kenneth French Data Library.
 data/benchmarks/
@@ -28,6 +41,12 @@ data/benchmarks/
 # ---------------------------------------------------------------------------
 # data/firm_overrides.csv  - a hand-made input, not an output. Every merge and
 #   keep-separate decision in it was checked by hand and cannot be regenerated.
+#
+# data/snapshots/MANIFEST.csv - generated, but tracked with the archive it
+#   describes. Without it a fresh clone holds snapshots whose provenance and
+#   hashes are unrecorded, which is the one thing the manifest exists to stop.
+#
+# figures/                 - a deliverable the reader sees, not an intermediate.
 #
 # data/snapshots/          - the archive is the asset. Oregon rotates old
 #   quarters off its site (8 of 52 probed URLs were still live), so a dated
