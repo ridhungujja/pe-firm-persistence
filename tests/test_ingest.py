@@ -408,3 +408,54 @@ class TestSponsorMapping:
         sponsors = assign_sponsor_ids(families, pd.DataFrame(
             columns=["firm_id", "sponsor_id", "confidence", "reason"]))
         assert sponsors.nunique() <= families.nunique()
+
+
+class TestNumeralDiagnostic:
+    """The strip in `normalise_firm_ids` uses the class [IVXLC].
+
+    A share-class letter drawn from that set is eaten as if it were the fund
+    number, stranding the real number in the stem and splitting the series.
+    D and M are roman digits but are NOT in the class, so they are safe -- a
+    fact worth pinning down, because the override file's own reasoning cites
+    "D as 500" as a risk and that is not what the regex does.
+    """
+
+    @pytest.mark.parametrize("letter", list("IVXLC"))
+    def test_class_letters_in_ivxlc_are_consumed(self, letter):
+        name = f"Acme Fund III {letter}"
+        stem = normalise_firm_ids(pd.DataFrame({"fund_name": [name]}))[0]
+        assert stem == "ACME FUND III", f"{letter} should be stripped as a numeral"
+
+    @pytest.mark.parametrize("letter", list("DMB"))
+    def test_letters_outside_the_class_are_not_consumed(self, letter):
+        name = f"Acme Fund III {letter}"
+        stem = normalise_firm_ids(pd.DataFrame({"fund_name": [name]}))[0]
+        assert stem == f"ACME FUND III {letter}"
+
+    def test_stranded_number_is_detected(self):
+        from diagnose_numerals import stranded_number
+
+        assert stranded_number("BDC III") == "III"
+        assert stranded_number("CVC CAPITAL PARTNERS IX (A)") == "IX"
+        assert stranded_number("TRITON FUND 6 SCSP") == "6"
+
+    def test_clean_stem_has_no_stranded_number(self):
+        from diagnose_numerals import stranded_number
+
+        assert stranded_number("BLACKSTONE CAPITAL PARTNERS") == ""
+        assert stranded_number("SILVER LAKE PARTNERS") == ""
+
+    def test_leading_number_is_not_read_as_a_fund_number(self):
+        from diagnose_numerals import stranded_number
+
+        # "57 Stars" and "2024 Golden Bay" begin with a number that belongs to
+        # the firm's name.
+        assert stranded_number("57 STARS GLOBAL OPPORTUNITIES FUND") == ""
+        assert stranded_number("2024 GOLDEN BAY") == ""
+
+    def test_acronyms_spellable_in_roman_letters_are_not_numbers(self):
+        from diagnose_numerals import stranded_number
+
+        # CVC, VIP, MIX all draw on IVXLC but are not valid roman numerals.
+        assert stranded_number("ACME CVC FUND") == ""
+        assert stranded_number("ACME VIP FUND") == ""

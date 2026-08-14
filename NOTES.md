@@ -779,3 +779,74 @@ sponsor `SILVER`, which groups correctly but reads badly in a table, so both
 are relabelled `SILVER LAKE`.
 
 Tests: 191 → 200.
+
+---
+
+## Item 2. Roman-numeral diagnostic — done. Pair count unchanged.
+
+`analysis/diagnose_numerals.py` → `data/numeral_diagnostic.csv`. Run across
+459 CalPERS names and 490 distinct Oregon names: **148 suspect names, 11 with
+a share-class letter consumed as a numeral.**
+
+### A correction to the override file's own reasoning
+
+The three BDC override rows say the class letter was consumed "as roman
+numeral 100 / 500". Half right. The strip uses the character class
+**`[IVXLC]`**, so **C, I, L, V and X are at risk — D and M are not**, despite
+being roman digits, because they are absent from the class. `BDC IV D LP`
+keeps its D and strands the number for a different reason (the trailing letter
+blocks the strip rather than being eaten by it). There are parametrised tests
+pinning both halves of this.
+
+### The 11 consumed-letter cases
+
+| source | name | stem | ate |
+|---|---|---|---|
+| CalPERS | BDC III C LP | BDC III | C |
+| CalPERS | BDC V C LP | BDC V | C |
+| CalPERS | Blackstone Tactical Opportunities Fund II - C | …FUND II - | C |
+| CalPERS | Genstar X Opportunities Fund I | GENSTAR X OPPORTUNITIES FUND | I |
+| CalPERS | Genstar XI Opportunities Fund I | GENSTAR XI OPPORTUNITIES FUND | I |
+| Oregon | Advent International GPE VII C | ADVENT INTERNATIONAL GPE VII | C |
+| Oregon | Advent Latin American PE Fund VI C | …FUND VI | C |
+| Oregon | Genstar VIII Opportunities Fund I | GENSTAR VIII OPPORTUNITIES FUND | I |
+| Oregon | Genstar IX Opportunities Fund I | GENSTAR IX OPPORTUNITIES FUND | I |
+| Oregon | Genstar X Opportunities Fund I | GENSTAR X OPPORTUNITIES FUND | I |
+| Oregon | Pathway PE Fund III-Co Series C | …SERIES | C |
+
+All five CalPERS cases were already fixed by existing overrides. The six
+Oregon ones are new, but Oregon does not enter the persistence regression, so
+they change no estimate.
+
+### Pair count: unchanged at 129 lagged / 65 headline
+
+68 stems still carry a stranded number and no override — 22 CalPERS, 46
+Oregon. I checked every one of the 22 CalPERS stems for a sibling whose
+de-numbered form matches, which is what a genuine split looks like.
+**All 22 are singletons.** Merging any of them would produce a one-fund family
+contributing zero pairs.
+
+The one apparent exception is `WIGMORE STREET VI CO-INVESTMENT NO` and
+`WIGMORE STREET CO-INVESTMENT NO`, which do share a de-numbered form. I left
+them separate: the four Wigmore Street vehicles are co-investment sleeves each
+tied to a *different* Bridgepoint fund (BDC III, BDC IV, Bridgepoint Europe
+VI, and one unnamed), not consecutive funds in one series. Merging them would
+manufacture a sequence out of four unrelated sleeves. Item 1's sponsor layer
+already handles their dependence correctly by putting all four under
+`BRIDGEPOINT`.
+
+**So: no overrides added, and I am reporting that as the finding.** The
+existing override file already catches every genuine CalPERS split this
+diagnostic can find.
+
+### One thing this did surface, for item 9
+
+CalPERS writes `Advent International GPE VII-C` (hyphen) and Oregon writes
+`Advent International GPE VII C` (space). The hyphen blocks the strip and the
+space lets the C be eaten, so the two plans produce **different stems for the
+same fund** — `ADVENT INTERNATIONAL GPE VII-C` against
+`ADVENT INTERNATIONAL GPE VII`. The overlap matcher keys on the raw stem, so
+Advent pairs are being silently lost from the cross-plan sample. Carried into
+item 9.
+
+Tests: 200 → 212.
