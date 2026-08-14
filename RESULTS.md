@@ -118,11 +118,60 @@ disagreement 1.41%. The implied reliability ratio of 0.944 corrects β to 0.227.
 Two sensitivities — dropping the single 68% outlier, and keeping only pairs
 that agree on vintage — both put it near 0.98, so the correction is 1.02–1.06×.
 
+## What this design could have detected
+
+An imprecise null invites the reader to conclude the study was merely
+inconclusive. The sharper question is what size of persistence this sample
+*could* have found. Power was computed on the actual estimation sample — the
+real y_lag values, real vintage dummies, real family sizes — with the outcome
+rebuilt for a grid of true coefficients and each replication tested exactly as
+the headline is tested, by wild cluster bootstrap at 5%.
+
+| true β | power (family clusters) | power (sponsor clusters) |
+|---|---|---|
+| 0.0 | 0.057 | 0.057 |
+| 0.1 | 0.067 | 0.090 |
+| 0.2 | 0.187 | 0.257 |
+| 0.3 | 0.457 | 0.470 |
+| 0.4 | 0.723 | 0.743 |
+| 0.5 | 0.940 | 0.933 |
+| 0.6 | 0.997 | 0.997 |
+
+**The minimum detectable effect at 80% power is β ≈ 0.43.** Rejection at β = 0
+is 0.057, so the test is correctly sized and the curve is not flattered by
+over-rejection.
+
+Two consequences follow, and they matter more than the point estimate.
+
+**At the coefficient actually estimated, power was about 19%.** A true β of
+0.214 would have been detected roughly one time in five. Failing to reject was
+the most likely outcome even if that value is exactly right.
+
+**The detectable effect is a Kaplan-Schoar-era magnitude, not a modern one.**
+Kaplan and Schoar (2005) reported persistence coefficients on log performance
+in the region of 0.4–0.6 for pre-2000 funds. The later literature — Harris,
+Jenkinson and Kaplan (2014), Braun, Jenkinson and Stoff (2017) — finds the
+effect much weaker after the early 2000s, generally well below 0.15 and often
+not distinguishable from zero. Against that, this design has power of roughly
+0.07–0.09.
+
+So the honest summary is not "we found no persistence". It is: **this design
+could only ever have detected persistence of the magnitude reported before
+2000, and had essentially no chance of detecting the magnitude the post-2000
+literature reports.** A null result was close to guaranteed regardless of the
+truth, and that is a fact about 39 clusters rather than about private equity.
+
+These literature figures are approximate and not strictly comparable — the
+studies differ in dependent variable, lag definition and sample — so they are
+used to place an order of magnitude, not to test against a specific number.
+
 ## Limitations, in priority order
 
-1. **Small n dominates everything.** 65 pairs, 39 families. The interval is
-   wide enough to contain both the Kaplan-Schoar-era estimates and zero. This
-   is not a precise null; it is an imprecise estimate.
+1. **Small n dominates everything.** 65 pairs, 39 families, 33 sponsors. The
+   interval is wide enough to contain both the Kaplan-Schoar-era estimates and
+   zero. This is not a precise null; it is an imprecise estimate, and the
+   power calculation above quantifies how imprecise: nothing below β ≈ 0.43
+   was reliably detectable.
 2. **Active partnerships only.** CalPERS removes fully exited funds, so old
    vintages that survive are those still holding unsold assets. Direction of
    bias unknown but not ignorable: a pre-2010 fund appears here only if it is

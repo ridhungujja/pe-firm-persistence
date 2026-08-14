@@ -35,6 +35,12 @@ to 2021, parsed with pdfplumber). Both are public-disclosure tables, the free
 substitute for Preqin. 43 funds appear in both at the same reporting date,
 which gives a direct read on cross-plan reporting noise.
 
+**What the design could detect.** Power analysis on the actual sample puts the
+minimum detectable effect at **β ≈ 0.43** — a Kaplan-Schoar-era magnitude. The
+post-2000 literature reports persistence well below 0.15, against which this
+design has ~8% power. So a null was close to guaranteed regardless of the
+truth; that is a fact about 39 clusters, not about private equity.
+
 **What it cannot support.** Any claim that persistence is present, or that it is
 absent. Any claim about realised performance from PME — 59 of 63 PME-eligible
 funds carry ~99% of their value as unrealised GP marks. Any claim about

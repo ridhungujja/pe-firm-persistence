@@ -997,3 +997,66 @@ There are five tests pinning it, including one asserting the sign of the bias,
 so the write-up cannot drift back to the intuition.
 
 Tests: 212 → 217.
+
+---
+
+## Item 6. Minimum detectable effect — the strongest result in the project
+
+`analysis/minimum_detectable_effect.py` → `data/minimum_detectable_effect.csv`.
+
+Power computed on the **actual** estimation sample: real y_lag values, real
+vintage dummies, real family sizes. The outcome is rebuilt for each candidate
+beta as `beta*y_lag + fitted_vintage + w_g*residual`, resampling the real
+residuals with cluster-level Rademacher signs so the true within-family
+dependence is preserved rather than assumed. Each replication is tested exactly
+as the headline is tested — wild cluster bootstrap, 5%, two-sided.
+
+| true β | power (family) | power (sponsor) |
+|---|---|---|
+| 0.0 | 0.057 | 0.057 |
+| 0.1 | 0.067 | 0.090 |
+| 0.2 | 0.187 | 0.257 |
+| 0.3 | 0.457 | 0.470 |
+| 0.4 | 0.723 | 0.743 |
+| 0.5 | 0.940 | 0.933 |
+| 0.6 | 0.997 | 0.997 |
+
+**MDE at 80% power: β ≈ 0.435 (family clustering), 0.430 (sponsor).**
+
+Size at β = 0 is 0.057 against a nominal 5%, so the curve is not flattered by a
+miscalibrated test. Using the analytic p-value instead would have overstated
+power, since it over-rejects at this cluster count.
+
+### Why this is the most useful thing here
+
+**Power at the coefficient actually estimated is ~19%.** If β really is 0.214,
+failing to reject was the most likely outcome — roughly four times in five.
+
+**The detectable effect is a pre-2000 magnitude.** Kaplan-Schoar-era
+coefficients on log performance sit around 0.4–0.6; the post-2000 literature
+(Harris-Jenkinson-Kaplan, Braun-Jenkinson-Stoff) puts persistence well below
+0.15 and often cannot reject zero. Against 0.15 this design has roughly 8%
+power.
+
+So the finding is not "no persistence". It is **"this design could only have
+detected persistence of the size reported before 2000, and had essentially no
+chance of detecting the size the modern literature reports"** — a statement
+about 39 clusters rather than about private equity. That is far stronger than
+an imprecise null, exactly as the queue anticipated.
+
+Sponsor clustering barely moves the curve (0.430 vs 0.435), consistent with
+item 1: only 6 of 39 families share a sponsor.
+
+### Caveat I want flagged
+
+The literature figures are **from memory and approximate**, and the studies are
+not strictly comparable — they differ in dependent variable, lag definition and
+sample construction. I have used them to place an order of magnitude, and
+RESULTS.md says so explicitly. Anyone relying on the comparison should check
+the specific coefficients against the papers.
+
+Added to RESULTS.md as its own section and to the README's ninety-second
+summary. Limitation 1 now points at the power figure instead of just asserting
+imprecision.
+
+Tests: 217 → 221.

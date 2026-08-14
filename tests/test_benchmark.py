@@ -234,3 +234,50 @@ class TestVintageErrorSimulation:
         # between arms would not isolate the labelling error.
         result = run(n_reps=150, beta=0.25, seed=8)
         assert result["beta_true_labels"].mean() == pytest.approx(0.25, abs=0.05)
+
+
+class TestMinimumDetectableEffect:
+    """Power curves are only meaningful if the test they use is calibrated.
+
+    These check the machinery rather than the headline number: correct size
+    under the null, monotone power, and interpolation that finds the crossing.
+    """
+
+    def test_interpolation_finds_the_crossing(self):
+        from minimum_detectable_effect import interpolate_mde
+
+        betas = [0.0, 0.1, 0.2, 0.3, 0.4]
+        powers = [0.05, 0.10, 0.40, 0.70, 0.90]
+        mde = interpolate_mde(betas, powers, target=0.80)
+        assert 0.3 < mde < 0.4
+
+    def test_interpolation_returns_nan_when_target_never_reached(self):
+        from minimum_detectable_effect import interpolate_mde
+
+        assert np.isnan(
+            interpolate_mde([0.0, 0.1], [0.05, 0.10], target=0.80)
+        )
+
+    def test_exact_hit_is_returned(self):
+        from minimum_detectable_effect import interpolate_mde
+
+        assert interpolate_mde([0.0, 0.5], [0.05, 0.80], target=0.80) == pytest.approx(0.5)
+
+    def test_shipped_power_curve_is_calibrated_and_monotone(self, repo_data):
+        path = repo_data / "minimum_detectable_effect.csv"
+        if not path.exists():
+            pytest.skip("run analysis/minimum_detectable_effect.py first")
+        table = pd.read_csv(path).dropna(subset=["beta"])
+        for cluster, group in table.groupby("clustered_on"):
+            group = group.sort_values("beta")
+            size = group[group["beta"] == 0]["power"].iloc[0]
+            assert 0.01 <= size <= 0.10, (
+                f"{cluster}: size {size:.3f} is not near the nominal 5%, so the "
+                "power curve is measuring a miscalibrated test"
+            )
+            powers = group["power"].to_numpy()
+            # Allow small Monte Carlo dips but require the curve to rise.
+            assert powers[-1] > powers[0] + 0.5
+            assert all(
+                b >= a - 0.06 for a, b in zip(powers, powers[1:])
+            ), f"{cluster}: power curve is not monotone"
