@@ -35,10 +35,13 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from pefund.ingest.base import load_firm_overrides  # noqa: E402
+from pefund.ingest.base import (  # noqa: E402
+    load_firm_overrides,
+    resolve_snapshot,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "data" / "calpers_snapshot.csv"
+DATA = ROOT / "data"
 OUT = ROOT / "data" / "family_review.csv"
 
 #: Tokens that mark a vehicle as something other than a step in the flagship
@@ -184,10 +187,7 @@ def build(snapshot: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    if not SNAPSHOT.exists():
-        raise SystemExit(f"{SNAPSHOT} not found; run analysis/fetch_calpers.py first")
-
-    snapshot = pd.read_csv(SNAPSHOT)
+    snapshot = pd.read_csv(resolve_snapshot(DATA, "calpers"))
     overrides = load_firm_overrides()
     review = build(snapshot, overrides)
     review.to_csv(OUT, index=False)

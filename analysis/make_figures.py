@@ -44,6 +44,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from pefund.ingest.base import resolve_snapshot  # noqa: E402
 from pefund.ingest.synthetic import SimulationConfig, simulate  # noqa: E402
 from pefund.metrics import summarise_panel  # noqa: E402
 from pefund.persistence import build_panel, estimate  # noqa: E402
@@ -184,11 +185,7 @@ def figure_funnel() -> None:
 
 
 def figure_vintage_coverage() -> None:
-    path = DATA / "calpers_snapshot.csv"
-    if not path.exists():
-        print("  skipped vintage coverage: run fetch_calpers.py first")
-        return
-    df = pd.read_csv(path)
+    df = pd.read_csv(resolve_snapshot(DATA, "calpers"))
     df["tvpi"] = df["total_value"] / df["contributions"]
     df["unrealised"] = df["nav"] / df["total_value"].replace(0, np.nan)
     by = df.groupby("vintage").agg(

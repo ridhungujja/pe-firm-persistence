@@ -60,6 +60,7 @@ from pefund.ingest.base import (  # noqa: E402
     load_firm_overrides,
     normalise_firm_ids,
     parse_fund_number,
+    resolve_snapshot,
 )
 from pefund.persistence import build_panel, estimate  # noqa: E402
 
@@ -144,7 +145,7 @@ def calpers_panel() -> pd.DataFrame:
 
 
 def main() -> None:
-    calpers = pd.read_csv(DATA / "calpers_snapshot.csv")
+    calpers = pd.read_csv(resolve_snapshot(DATA, "calpers"))
     calpers_date = pd.Timestamp(calpers["as_of"].iloc[0]).date()
 
     oregon_path = SNAPSHOTS / f"oregon_{calpers_date}.csv"

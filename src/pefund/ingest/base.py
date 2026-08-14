@@ -531,6 +531,27 @@ def cash_flows_from_long(
     return out
 
 
+def resolve_snapshot(data_dir: str | Path, prefix: str) -> Path:
+    """Find a snapshot: the working copy, else the newest dated archive copy.
+
+    The working copies in data/ are rebuilt by the fetch scripts and are
+    gitignored, so a fresh clone has only the dated archive. Offline
+    reproduction has to work from that, which means every consumer needs the
+    fallback rather than just the two that happened to be tested.
+    """
+    data_dir = Path(data_dir)
+    working = data_dir / f"{prefix}_snapshot.csv"
+    if working.exists():
+        return working
+    archived = sorted((data_dir / "snapshots").glob(f"{prefix}_[0-9]*.csv"))
+    if archived:
+        return archived[-1]
+    raise SystemExit(
+        f"no {prefix} snapshot found in {data_dir} or its snapshots/ archive; "
+        f"run: python analysis/fetch_{prefix}.py"
+    )
+
+
 def funds_observed_from_inception(panel: pd.DataFrame) -> pd.Index:
     """Funds whose entire cash flow history falls inside a snapshot archive.
 
