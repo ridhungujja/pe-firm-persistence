@@ -426,3 +426,44 @@ Validation: `attenuation()` has tests recovering a known lambda from simulated
 reports with a known error variance (0.30/0.10 → 0.90, recovered to ±0.03).
 
 Tests: 175 → 181.
+
+---
+
+## 7. Figures — done
+
+`analysis/make_figures.py` → six PNGs in `figures/`. Matplotlib only, no
+seaborn, all readable at half size.
+
+`coefficients.png`, `sample_funnel.png`, `vintage_coverage.png`,
+`transition_heatmap.png`, `simulation_validation.png`, `leave_one_out.png`.
+
+**Judgement call: vintage coverage is two stacked panels, not one panel with
+two y-axes.** The queue asked for fund count and median TVPI in one figure.
+Putting both on a twin axis is the single most common way to mislead with a
+chart: the reader sees the two lines cross, or diverge, and reads a
+relationship that is entirely an artefact of where the two scales were pinned.
+Same x-axis, two panels, no false crossing available.
+
+**Colours** are the first three slots of a palette I ran through a
+colour-vision validator before using: worst all-pairs CVD deltaE 9.2, worst
+normal-vision 24.0 on a light surface, all checks pass. Aqua sits below 3:1
+contrast on white, so wherever it appears it carries a text label rather than
+relying on colour. Blue is the estimate, orange is the headline row, and no
+figure uses colour as the only cue.
+
+The transition heatmap is a single-hue sequential ramp with counts printed in
+every cell. A rainbow would imply the quartiles are unordered categories, and
+percentages without counts are meaningless at n = 47 — "43%" is six funds.
+
+**Two layout bugs I caught only by rendering and looking**, which is worth
+recording as a habit: the leave-one-out annotation was printed on top of the
+histogram bars and unreadable, and the funnel's x labels collided into each
+other ("Rows published" / "After share-class" / "Computable" ran together).
+Both fixed. Generating a figure is not the same as checking it.
+
+`simulation_validation.png` is the one to look at first. Six DGP settings with
+true beta from 0.00 to 0.44; every 95% interval covers the identity line. The
+estimator recovers known persistence before it is pointed at real data.
+
+Figures are committed rather than gitignored — they are a deliverable the
+reader sees, not an intermediate artefact, and they total ~350KB.
