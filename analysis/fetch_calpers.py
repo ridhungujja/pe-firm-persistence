@@ -24,6 +24,7 @@ from pefund.ingest.base import (  # noqa: E402
     normalise_firm_ids,
     parse_fund_number,
 )
+from pefund.ingest.manifest import write_manifest  # noqa: E402
 from pefund.ingest.calpers import CALPERS_URL, load  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[1] / "data"
@@ -71,6 +72,7 @@ def main() -> None:
         print(f"archived snapshot -> {archived}")
     else:
         print(f"snapshot for {as_of} already archived, not overwritten")
+    write_manifest(snapshots)
 
     print(f"\n{n_raw_rows} rows published, {len(df)} funds after share-class dedup")
     print(f"vintages {df['vintage'].min()}-{df['vintage'].max()}")

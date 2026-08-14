@@ -68,3 +68,33 @@ change its character — these are young funds carrying GP valuations. Task 5
 should treat this as infrastructure, not a finding.
 
 Tests: 130 → 137.
+
+---
+
+## 2. Snapshot provenance manifest — done
+
+`data/snapshots/MANIFEST.csv`, 37 rows: 19 parsed snapshots and 18 raw PDFs.
+Columns are filename, kind, source, as_of, download_timestamp, sha256, rows.
+
+**Judgement call: the manifest covers raw PDFs too, not just the CSVs.** The
+queue specified a row count, which only applies to snapshots, but the PDFs are
+the irreplaceable half of the archive and a corrupted one would otherwise be
+invisible. Raw rows carry an empty row count and a quarter-end `as_of` derived
+from the filename, so no PDF has to be reopened to build the manifest.
+
+**Judgement call: `download_timestamp` is preserved across rebuilds** for any
+file whose hash is unchanged. Rebuilding is bookkeeping; if it restamped every
+row with today's date it would destroy the provenance the file exists to hold.
+Only a genuine byte change refreshes the timestamp. There is a test for this,
+and one asserting that building the manifest never writes or deletes a
+snapshot.
+
+`verify_manifest()` reports `missing` / `untracked` / `changed`. The `changed`
+case is the one that matters: a re-download returning different bytes for the
+same quarter means the plan restated something, and a restatement changes
+reconstructed cash flows. File size and mtime would not catch it.
+
+Wired into both fetch scripts, so the manifest refreshes whenever the archive
+does. The shipped archive currently verifies clean.
+
+Tests: 137 → 156.

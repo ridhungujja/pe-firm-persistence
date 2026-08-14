@@ -31,6 +31,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from pefund.ingest.manifest import write_manifest  # noqa: E402
 from pefund.ingest.oregon import (  # noqa: E402
     OREGON_HOLDINGS_PAGE,
     discover_reports,
@@ -100,6 +101,9 @@ def main() -> None:
 
     repeated = (panel.groupby("fund_id")["as_of"].nunique() >= 2).sum()
     print(f"{repeated} funds observed at 2+ dates -> cash flows reconstructable")
+
+    manifest = write_manifest(SNAPSHOTS)
+    print(f"manifest: {len(manifest)} archived files -> {SNAPSHOTS / 'MANIFEST.csv'}")
 
 
 if __name__ == "__main__":
