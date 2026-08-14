@@ -98,6 +98,14 @@ three regimes — raw regex stems, high-confidence merges only, all merges — g
 error. The merges do drive sample size: regex-only leaves 40 usable
 observations against 65.
 
+**Row 9 is a precision loss, not a finding.** Restricting to families with
+three or more funds halves β to 0.148, which invites reading it as evidence
+against persistence. It is not. The restriction drops 21 of 39 families and
+nearly doubles the standard error, from 0.138 to 0.211, so the interval
+[−0.265, 0.562] is wider than the unrestricted one in both directions. The row
+says the sub-sample is too small to speak, not that persistence is absent in
+it.
+
 **No single family or year carries it.** Dropping each family in turn spans
 [0.138, 0.281] over 39 refits; each vintage, [0.118, 0.308] over 17. No refit
 produces β ≤ 0. The most influential exclusion is vintage 2008 (β → 0.118).
@@ -112,11 +120,33 @@ permutation null of 25.9%, p = 0.089. Suggestive, not significant, and on cell
 counts as small as six funds.
 
 **Measurement error is small and does not rescue the estimate.** 43 funds
-appear in both plans at the same reporting date, giving a direct read on
-reporting noise: log TVPI correlates 0.944 across plans, median absolute
-disagreement 1.41%. The implied reliability ratio of 0.944 corrects β to 0.227.
-Two sensitivities — dropping the single 68% outlier, and keeping only pairs
-that agree on vintage — both put it near 0.98, so the correction is 1.02–1.06×.
+appear in both plans at the same reporting date, which is a direct read on
+reporting noise. Two distinct quantities come out of it and should not be run
+together:
+
+- the **cross-plan correlation** of log TVPI, 0.944 — a description of how
+  closely the two reports track each other;
+- the **reliability ratio** λ = var(true) / (var(true) + var(error)), which is
+  what actually divides into β.
+
+They coincide numerically here, and not by accident: for two parallel
+measurements of the same quantity the correlation *equals* the reliability
+ratio, provided the two reports have equal error variance and their errors are
+independent of each other and of the truth. The first condition is plausible;
+**the second is not**, because both plans receive the same GP-reported
+valuation. Their errors share a large common component, which inflates the
+correlation above the true reliability. So the correlation is reported as a
+description and λ is estimated separately from the variance of the paired
+differences, rather than read off the correlation.
+
+Estimated that way, **λ = 0.98**, correcting β from 0.214 to 0.219 — a 1.02×
+adjustment. That figure excludes a single pair, Tailwind Capital Partners III,
+where the two plans disagree by 68%; including it drops λ to 0.944 and the
+correction to 1.06×. The full-sample figure is reported as the sensitivity
+rather than the headline because one observation in 43 should not set a
+variance estimate, and because that observation is unexplained (see
+DEVELOPMENT_LOG). Restricting instead to the 25 pairs where the plans agree on
+vintage gives λ = 0.980, which is the same answer by a different route.
 
 ## What this design could have detected
 

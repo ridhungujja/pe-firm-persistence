@@ -1060,3 +1060,41 @@ summary. Limitation 1 now points at the power figure instead of just asserting
 imprecision.
 
 Tests: 217 → 221.
+
+---
+
+## Item 7. Three RESULTS.md corrections — done
+
+**(a) Correlation and reliability were run together.** The old text said "log
+TVPI correlates 0.944 across plans… the implied reliability ratio of 0.944",
+as though the second followed from the first. They are different quantities.
+They do coincide here, and not by accident — for two *parallel* measurements
+the correlation equals the reliability ratio — but only if the two reports
+have equal error variance and their errors are independent. **The independence
+condition fails**: both plans receive the same GP valuation, so their errors
+share a large common component, which inflates the correlation above the true
+reliability. RESULTS.md now separates the two, states the assumptions, and says
+which one is doubtful. λ is estimated from the variance of the paired
+differences, never read off the correlation.
+
+**(b) λ = 0.98 is now the headline, 0.944 the sensitivity.** The full-sample
+figure is driven by a single pair in 43 — Tailwind Capital Partners III, a 68%
+disagreement — and one observation should not set a variance estimate.
+Correction is now stated as 1.02× (β 0.214 → 0.219) with 1.06× as the
+sensitivity. The independent route, restricting to the 25 pairs that agree on
+vintage, gives λ = 0.980 and corroborates it.
+
+**(c) Row 9 relabelled as a precision loss.** Restricting to families with 3+
+funds halves β to 0.148, which reads like evidence against persistence. It is
+not: the restriction drops 21 of 39 families and nearly doubles the standard
+error (0.138 → 0.211), so the interval is *wider in both directions*. New
+paragraph says the sub-sample is too small to speak, rather than that
+persistence is absent in it.
+
+README updated to match on (a) and (b).
+
+**Left inconsistent on purpose:** `run_overlap.py` still prints the
+full-sample λ as its headline. Item 9 investigates Tailwind and may remove the
+pair outright, in which case the full-sample figure *becomes* 0.98 and no
+sensitivity framing is needed. Reconciling the script before knowing that
+outcome would mean doing it twice.
