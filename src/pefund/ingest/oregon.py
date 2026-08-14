@@ -118,6 +118,75 @@ def quarter_url(year: int, quarter: int) -> str:
     return OREGON_URL_TEMPLATE.format(year=year, quarter=quarter)
 
 
+#: Page listing every published performance report.
+OREGON_HOLDINGS_PAGE = (
+    "https://www.oregon.gov/treasury/invested-for-oregon/Pages/"
+    "Performance-Holdings.aspx"
+)
+
+#: Quarter and year out of a filename. Oregon has used at least five naming
+#: conventions for the same report -- "Quarter-1-2021", "Quarter_1_2021",
+#: "Q2-2022", "PrivateEquity-Q3-2023" -- so the URL cannot be constructed by
+#: template. It has to be discovered.
+_FILENAME_QUARTER = re.compile(r"Q(?:uarter)?[-_ ]?([1-4])[-_ ]((?:19|20)\d{2})", re.I)
+_PE_REPORT = re.compile(r"private[-_ ]?equity", re.I)
+
+
+def discover_reports(page_url: str = OREGON_HOLDINGS_PAGE) -> list[dict]:
+    """Find every private equity report linked from the holdings page.
+
+    Guessing URLs from a template finds only the quarters that happen to use
+    the current naming convention, and silently misses the rest: probing the
+    2024-25 template across 2014-2026 turned up 8 reports, while reading the
+    page turns up 18, including two filed under a folder for the wrong year.
+    Discovery also degrades honestly -- if Oregon reorganises, this returns
+    nothing rather than fabricating URLs that 404.
+
+    Returns dicts of {url, filename, year, quarter}, newest first.
+    """
+    request = urllib.request.Request(page_url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        html = response.read().decode("utf-8", "ignore")
+
+    seen, reports = set(), []
+    for href in re.findall(r'href="([^"]+\.pdf)"', html, re.I):
+        if not _PE_REPORT.search(href):
+            continue
+        url = href if href.startswith("http") else f"https://www.oregon.gov{href}"
+        if url in seen:
+            continue
+        seen.add(url)
+
+        filename = url.rsplit("/", 1)[-1]
+        match = _FILENAME_QUARTER.search(filename)
+        if not match:
+            continue
+        # Year comes from the filename, not the containing folder: Oregon files
+        # the Q4 2025 report under /2026/.
+        reports.append(
+            {
+                "url": url,
+                "filename": filename,
+                "quarter": int(match.group(1)),
+                "year": int(match.group(2)),
+            }
+        )
+
+    return sorted(reports, key=lambda r: (r["year"], r["quarter"]), reverse=True)
+
+
+def download_url(url: str, dest: str | Path) -> Path:
+    """Save a report by URL. Never overwrites: the archive is the asset."""
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        return dest
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        dest.write_bytes(response.read())
+    return dest
+
+
 def download(year: int, quarter: int, dest: str | Path) -> Path:
     """Save one quarterly PDF. Never overwrites: the archive is the asset."""
     dest = Path(dest)

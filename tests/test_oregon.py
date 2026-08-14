@@ -193,3 +193,79 @@ class TestMetadata:
         # source for the limitations section, so it ships with the code.
         assert "SHOULD NOT be used to assess" in DISCLAIMER
         assert "HAVE NOT been approved" in DISCLAIMER
+
+
+class TestReportDiscovery:
+    """Oregon has used at least five naming conventions for one report.
+
+    A URL template finds only the quarters matching the current convention.
+    These tests pin the filename parsing against every observed form, using an
+    inline HTML sample so nothing here touches the network.
+    """
+
+    SAMPLE_HTML = """
+    <a href="/treasury/.../2021/OPERF-Private-Equity-Portfolio-Quarter-1-2021.pdf">Q1</a>
+    <a href="/treasury/.../2022/OPERF-Private-Equity-Q2-2022.pdf">Q2</a>
+    <a href="/treasury/.../2023/PrivateEquity-Q3-2023.pdf">Q3</a>
+    <a href="/treasury/.../2023/OPERF_Private_Equity_Portfolio_-_Quarter_4_2023.pdf">Q4</a>
+    <a href="/treasury/.../2026/OPERF-Private-Equity-Portfolio-Quarter-4-2025.pdf">Q4</a>
+    <a href="/treasury/.../2025/OPERF-Fixed-Income-Quarter-1-2025.pdf">not PE</a>
+    <a href="/treasury/.../notes.pdf">no quarter</a>
+    """
+
+    @staticmethod
+    def _discover(html):
+        import pefund.ingest.oregon as oregon
+
+        class _Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return html.encode()
+
+        original = oregon.urllib.request.urlopen
+        oregon.urllib.request.urlopen = lambda *a, **k: _Response()
+        try:
+            return oregon.discover_reports()
+        finally:
+            oregon.urllib.request.urlopen = original
+
+    def test_all_naming_conventions_are_recognised(self):
+        found = self._discover(self.SAMPLE_HTML)
+        assert {(r["year"], r["quarter"]) for r in found} == {
+            (2021, 1), (2022, 2), (2023, 3), (2023, 4), (2025, 4),
+        }
+
+    def test_year_comes_from_the_filename_not_the_folder(self):
+        # Oregon files the Q4 2025 report under a /2026/ folder. Trusting the
+        # folder would date the snapshot a year late and corrupt the ordering
+        # that cash-flow differencing depends on.
+        found = self._discover(self.SAMPLE_HTML)
+        q4_2025 = [r for r in found if r["filename"].endswith("Quarter-4-2025.pdf")]
+        assert len(q4_2025) == 1
+        assert q4_2025[0]["year"] == 2025
+        assert "/2026/" in q4_2025[0]["url"]
+
+    def test_non_private_equity_reports_are_skipped(self):
+        found = self._discover(self.SAMPLE_HTML)
+        assert not any("Fixed-Income" in r["filename"] for r in found)
+
+    def test_links_without_a_quarter_are_skipped(self):
+        found = self._discover(self.SAMPLE_HTML)
+        assert not any(r["filename"] == "notes.pdf" for r in found)
+
+    def test_relative_links_are_absolutised(self):
+        found = self._discover(self.SAMPLE_HTML)
+        assert all(r["url"].startswith("https://www.oregon.gov/") for r in found)
+
+    def test_results_are_newest_first(self):
+        found = self._discover(self.SAMPLE_HTML)
+        keys = [(r["year"], r["quarter"]) for r in found]
+        assert keys == sorted(keys, reverse=True)
+
+    def test_reorganised_page_yields_nothing_rather_than_bad_urls(self):
+        assert self._discover("<html><body>no reports here</body></html>") == []
