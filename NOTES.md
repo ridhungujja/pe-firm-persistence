@@ -887,3 +887,63 @@ of the +1 vintage disagreement pattern, relevant to items 4 and 5.
 Assurance ×2, Genstar Opportunities ×2, Lightspeed Inception/Ignite ×4). None
 carries a "confirm before publishing" caveat; they are judgement calls about
 whether paired vehicles form one series, stated as such.
+
+---
+
+## Item 4. Vintage-year methodology — half confirmed, half not reachable
+
+### Neither plan publishes a definition
+
+The Oregon PDF carries exactly two footnotes — one on secondary sales, one on
+"NM" — and defines the other columns nowhere. "Vintage Year" is a bare column
+header. The CalPERS page mentions vintage only in passing ("Funds with a
+vintage year of 2021 or later are in the initial stages…") and never says what
+it means. I tried the obvious CalPERS methodology and glossary pages
+(`/private-equity-program`, `/asset-classes/private-equity`, `/glossary`):
+404, 403 and 404 respectively. The Oregon holdings page contains no mention of
+the word at all.
+
+**So the documented answer does not exist in reachable sources.** Rather than
+stop there, I tested the hypothesis against the data.
+
+### Oregon: refuted, and cleanly
+
+The snapshot archive contains 63 funds observed from inception — zero paid-in
+at first appearance, so Oregon's own first capital call is *inside* the
+observation window and can be dated by differencing. Comparing that against
+Oregon's reported vintage:
+
+| Oregon first-call year − reported vintage | funds |
+|---|---|
+| 0 | 31 |
+| +1 | 22 |
+| +2 | 6 |
+| +3 | 2 |
+| +6 | 1 |
+| +7 | 1 |
+
+**Oregon does not define vintage as its own first capital call.** If it did,
+the gap would be identically zero; it is non-zero for 32 of 63 funds. The gap
+is also never negative, which is what you would expect if the reported vintage
+is the fund's own vintage or first close and Oregon draws capital at or after
+it. So the Oregon half of the hypothesis is refuted, and the reported field
+behaves like a genuine fund vintage.
+
+### CalPERS: consistent with the hypothesis, not confirmable
+
+Across the 43 aligned cross-plan pairs, CalPERS' vintage is **never earlier**
+than Oregon's — 25 equal, 14 one year later, 4 two years later. Strict
+one-sidedness is the point: if both plans were reporting the same quantity
+with clerical noise, disagreements would be roughly symmetric. They are not,
+so the difference is definitional rather than random.
+
+Given Oregon reports the fund's vintage, CalPERS must be reporting something
+systematically later — its own first capital call and its own commitment date
+are both consistent with the pattern, and I cannot separate them. CalPERS
+publishes cumulative totals only, with no dated flows and no archive of prior
+quarters, so the test that worked for Oregon cannot be run.
+
+**Stated conclusion: Oregon reports the fund's vintage; CalPERS reports
+something one to two years later that cannot be identified from public data.**
+That is enough for item 5 — the direction of the label error is established
+even though its exact definition is not.
