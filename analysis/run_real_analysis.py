@@ -79,6 +79,24 @@ pd.set_option("display.max_columns", 40)
 warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
 
 
+def raw_table() -> pd.DataFrame:
+    """The un-normalised CalPERS table.
+
+    Prefers the working copy, falls back to the newest dated capture in the
+    snapshot archive. A fresh clone has only the archived one, and offline
+    reproduction has to work from that.
+    """
+    if RAW.exists():
+        return pd.read_csv(RAW)
+    archived = sorted((DATA / "snapshots").glob("calpers_raw_*.csv"))
+    if not archived:
+        raise SystemExit(
+            f"{RAW} not found and no archived capture in data/snapshots/; "
+            "run: python analysis/fetch_calpers.py"
+        )
+    return pd.read_csv(archived[-1])
+
+
 def header(text: str) -> None:
     print(f"\n{text}\n{'-' * len(text)}")
 
@@ -274,10 +292,7 @@ def robustness_rows(panel: pd.DataFrame, mature: pd.DataFrame):
 
 
 def main() -> None:
-    if not RAW.exists():
-        raise SystemExit(f"{RAW} not found; run: python analysis/fetch_calpers.py")
-
-    raw = pd.read_csv(RAW)
+    raw = raw_table()
     all_overrides = load_firm_overrides()
     high_conf = all_overrides[
         (all_overrides["decision"] == "keep_separate")

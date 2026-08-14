@@ -63,6 +63,9 @@ from pefund.ingest.base import (  # noqa: E402
 )
 from pefund.persistence import build_panel, estimate  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from run_real_analysis import raw_table  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 SNAPSHOTS = DATA / "snapshots"
@@ -126,7 +129,7 @@ def bootstrap_lambda(log_a, log_b, n_boot=9999, seed=20240813):
 
 
 def calpers_panel() -> pd.DataFrame:
-    raw = pd.read_csv(DATA / "calpers_raw.csv")
+    raw = raw_table()
     overrides = load_firm_overrides()
     df = raw.copy()
     df["firm_id_raw"] = normalise_firm_ids(df)

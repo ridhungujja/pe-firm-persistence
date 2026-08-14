@@ -19,7 +19,8 @@ data/persistence_results.csv
 data/share_class_dedup.csv
 data/vintage_anomalies.csv
 data/oregon_pme.csv
-data/calpers_raw.csv
+data/calpers_raw.csv            # working copy; the dated capture in
+                                # data/snapshots/ is tracked instead
 data/real_specifications.csv
 data/all_specifications.csv
 data/robustness_rows.csv

@@ -43,11 +43,22 @@ def main() -> None:
 
     n_raw_rows = len(df)
 
-    # The un-normalised table, cached so the mapping-robustness table can
-    # rebuild each regime (regex-only / high-confidence / all merges) without
-    # three more network round-trips. Share-class dedup depends on firm_id, so
-    # a regime cannot be recovered from the processed snapshot.
+    # The un-normalised table, kept so the mapping-robustness table can rebuild
+    # each regime (regex-only / high-confidence / all merges) without three
+    # more network round-trips. Share-class dedup depends on firm_id, so a
+    # regime cannot be recovered from the processed snapshot.
+    #
+    # Archived under a dated name as well as the working copy. CalPERS
+    # publishes only the current quarter, so this capture is source data that
+    # cannot be re-fetched later -- the same argument as the Oregon PDFs -- and
+    # it is what lets `run_all.sh --offline` work from a fresh clone.
     df.to_csv(OUT / "calpers_raw.csv", index=False)
+    raw_archive = OUT / "snapshots"
+    raw_archive.mkdir(parents=True, exist_ok=True)
+    raw_as_of = pd.Timestamp(df["as_of"].max()).date()
+    raw_dated = raw_archive / f"calpers_raw_{raw_as_of}.csv"
+    if not raw_dated.exists():
+        df.to_csv(raw_dated, index=False)
 
     df["firm_id_raw"] = normalise_firm_ids(df)
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"])
