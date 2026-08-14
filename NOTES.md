@@ -717,3 +717,65 @@ More **families**, not more funds — precision is bounded by 39 clusters, not b
 the Oregon adapter shows the PDF path costs about a day. Each new plan also
 adds cross-plan overlap pairs, which is the only route to a measurement-error
 estimate that is not a floor.
+
+---
+
+## Item 1. Sponsor-level clustering — done
+
+New layer above family: `sponsor_id`. `derive_sponsor_ids()` takes the
+family's leading token (stripping a leading "The"), and
+`data/sponsor_overrides.csv` carries 22 hand-recorded corrections for the
+cases the rule gets wrong. Fund family remains the estimation unit; only the
+clustering dimension changes.
+
+**Result — the change is real but small:**
+
+| | β | SE | 95% CI | p | p_boot | clusters |
+|---|---|---|---|---|---|---|
+| headline, clustered on **family** | 0.2142 | 0.1381 | [−0.057, 0.485] | 0.121 | 0.187 | **39** |
+| headline, clustered on **sponsor** | 0.2142 | 0.1398 | [−0.060, 0.488] | 0.125 | 0.177 | **33** |
+
+β is identical to nine decimal places, as it must be — clustering is a
+variance assumption and cannot move a point estimate. There is a test
+asserting exactly that.
+
+The SE widens 1.2%, from 0.1381 to 0.1398. **Smaller than I expected.** The
+reason: only 6 of the 39 headline families share a sponsor with another
+family in the sample — Blackstone, Bridgepoint, Carlyle, Permira, Silver Lake
+and TPG, each contributing exactly two families. 27 sponsors are singletons,
+so most of the clustering structure is unchanged. The estimate rests on
+**33 sponsors rather than 39 families**.
+
+Across the whole panel the compression is much larger: 330 families → 216
+sponsors. It only fails to matter here because the multi-family sponsors
+mostly sit outside the adjacent-and-mature subsample.
+
+### Judgement calls in the mapping
+
+The leading-token rule is deliberately crude, for the same reason
+`normalise_firm_ids` is — a cleverer rule fails in ways nobody can audit. It
+is wrong in four identifiable ways, all hand-recorded:
+
+1. **Two firms sharing a first word.** General Atlantic and General Catalyst
+   are unrelated; the rule pools them. Same for The Rise Fund and The Veritas
+   Capital Fund once "The" is stripped.
+2. **The Rise Fund is TPG-sponsored but recorded as its own sponsor**
+   (`TPG RISE`, medium confidence). TPG raises it, but it is governed as a
+   separate impact platform with its own investment committee, so pooling it
+   with TPG's buyout families would overstate the dependence. Arguable either
+   way; flagged as such.
+3. **CalPERS programme labels are not manager names.** "California Asia
+   Investors", "CalPERS Corporate Partners" and their siblings are named for
+   the LP, not the GP, and are run by different outside managers. Each is
+   recorded as its own sponsor so the rule does not invent a seven-family
+   "CALIFORNIA" firm.
+4. **Wigmore Street and BDC are both Bridgepoint.** The Wigmore Street
+   vehicles co-invest alongside Bridgepoint Development Capital funds. Mapped
+   to `BRIDGEPOINT`, which is what puts Bridgepoint into the headline sample's
+   multi-family list.
+
+`SILVER LAKE PARTNERS` and `SILVER LAKE TECHNOLOGY INVESTORS` derive to
+sponsor `SILVER`, which groups correctly but reads badly in a table, so both
+are relabelled `SILVER LAKE`.
+
+Tests: 191 → 200.

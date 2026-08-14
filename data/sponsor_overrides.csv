@@ -1,0 +1,41 @@
+firm_id,sponsor_id,confidence,reason
+# Hand-recorded family -> sponsor corrections, applied on top of the
+# leading-token rule in derive_sponsor_ids().
+#
+# A sponsor is the firm; a family is one of its fund series. Clustering runs on
+# sponsor because two families under one firm share an investment committee and
+# deal flow, so their residuals are correlated and treating them as independent
+# clusters understates the standard error.
+#
+# Only families that contribute a lagged pair affect any estimate. The rest are
+# recorded for completeness so the mapping is correct if the sample grows.
+#
+# --- Two different firms sharing a first word --------------------------------
+GENERAL ATLANTIC MANAGED ACCOUNT,GENERAL ATLANTIC,high,General Atlantic and General Catalyst are unrelated firms; the leading-token rule pools them.
+GENERAL CATALYST GROUP XII - CREATION,GENERAL CATALYST,high,Separates General Catalyst from General Atlantic.
+GENERAL CATALYST GROUP XII - ENDURANCE,GENERAL CATALYST,high,Separates General Catalyst from General Atlantic.
+GENERAL CATALYST GROUP XII - IGNITION,GENERAL CATALYST,high,Separates General Catalyst from General Atlantic.
+GENERAL CATALYST HEALTH ASSURANCE,GENERAL CATALYST,high,Separates General Catalyst from General Atlantic.
+THE VERITAS CAPITAL FUND,VERITAS CAPITAL,high,After the leading 'The' is stripped the rule would group Veritas with The Rise Fund; they are unrelated.
+THE RISE FUND,TPG RISE,medium,"TPG sponsors the Rise funds but they are raised and governed as a separate impact platform with their own investment committee, so they are kept apart from the TPG buyout families rather than pooled with them."
+#
+# --- CalPERS programme labels, not manager names -----------------------
+CALIFORNIA ASIA INVESTORS,CALIFORNIA ASIA INVESTORS,medium,'California' here is a CalPERS programme label; these four vehicles are run by different outside managers and must not be pooled into one sponsor.
+CALIFORNIA COMMUNITY VENTURE FUND,CALIFORNIA COMMUNITY VENTURE FUND,medium,"CalPERS programme label, separate manager."
+CALIFORNIA EMERGING VENTURES,CALIFORNIA EMERGING VENTURES,medium,"CalPERS programme label, separate manager (Grosvenor-managed fund-of-funds series)."
+CALIFORNIA PARTNERS,CALIFORNIA PARTNERS,medium,"CalPERS programme label, separate manager."
+CALPERS CLEAN ENERGY & TECHNOLOGY FUND,CALPERS CLEAN ENERGY & TECHNOLOGY FUND,medium,"Named for the LP, not the GP; the three CalPERS-branded vehicles have different managers."
+CALPERS CORPORATE PARTNERS,CALPERS CORPORATE PARTNERS,medium,"Named for the LP, not the GP."
+CALPERS WELLSPRING,CALPERS WELLSPRING,medium,"Named for the LP; managed by Wellspring Capital, which appears separately."
+#
+# --- Co-investment vehicles named after the street, not the sponsor -----
+WIGMORE STREET (BDC III),BRIDGEPOINT,medium,Wigmore Street vehicles co-invest alongside Bridgepoint's BDC funds and are managed by Bridgepoint; grouping them under Bridgepoint keeps the cluster honest.
+WIGMORE STREET BDC IV CO-INVESTMENT NO1,BRIDGEPOINT,medium,Bridgepoint co-investment vehicle.
+WIGMORE STREET CO-INVESTMENT NO,BRIDGEPOINT,medium,Bridgepoint co-investment vehicle.
+WIGMORE STREET VI CO-INVESTMENT NO,BRIDGEPOINT,medium,Bridgepoint co-investment vehicle.
+BDC,BRIDGEPOINT,medium,BDC is Bridgepoint Development Capital; grouped with the Wigmore Street co-invest vehicles under one sponsor.
+BRIDGEPOINT EUROPE,BRIDGEPOINT,high,"Bridgepoint's European flagship, same sponsor as BDC."
+#
+# --- Leading token is correct but a poor label -------------------------------
+SILVER LAKE PARTNERS,SILVER LAKE,high,"Leading-token rule yields ""SILVER"", which groups correctly but reads badly in a results table."
+SILVER LAKE TECHNOLOGY INVESTORS,SILVER LAKE,high,Same sponsor as the Silver Lake Partners flagship.

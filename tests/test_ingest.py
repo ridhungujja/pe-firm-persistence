@@ -7,10 +7,13 @@ import pytest
 from pefund.ingest.base import (
     add_sequence_numbers,
     apply_firm_overrides,
+    assign_sponsor_ids,
     cash_flows_from_long,
+    derive_sponsor_ids,
     deduplicate_share_classes,
     flag_vintage_anomalies,
     load_firm_overrides,
+    load_sponsor_overrides,
     normalise_firm_ids,
     parse_fund_number,
     reconstruct_flows_from_snapshots,
@@ -335,3 +338,73 @@ def test_anomalous_vintages_are_flagged_not_corrected():
     )
     out, _ = flag_vintage_anomalies(funds)
     assert list(out["vintage"]) == [2015, 2008], "vintages must not be rewritten"
+
+
+# --------------------------------------------------------------- sponsors
+
+
+class TestSponsorMapping:
+    """Sponsor sits above family. Two families under one firm share an
+    investment committee, so their residuals are correlated and they must not
+    be counted as independent clusters."""
+
+    def test_leading_token_is_the_sponsor(self):
+        families = pd.Series([
+            "SILVER LAKE PARTNERS", "SILVER LAKE TECHNOLOGY INVESTORS",
+            "CARLYLE EUROPE PARTNERS", "CARLYLE PARTNERS",
+        ])
+        assert list(derive_sponsor_ids(families)) == [
+            "SILVER", "SILVER", "CARLYLE", "CARLYLE"
+        ]
+
+    def test_leading_article_is_stripped(self):
+        # "The Rise Fund" and "The Veritas Capital Fund" would otherwise both
+        # become sponsor "THE".
+        out = derive_sponsor_ids(pd.Series(["THE RISE FUND", "THE VERITAS CAPITAL FUND"]))
+        assert list(out) == ["RISE", "VERITAS"]
+
+    def test_single_token_family_is_its_own_sponsor(self):
+        assert derive_sponsor_ids(pd.Series(["PERMIRA"]))[0] == "PERMIRA"
+
+    def test_overrides_separate_two_firms_sharing_a_first_word(self):
+        families = pd.Series([
+            "GENERAL ATLANTIC MANAGED ACCOUNT", "GENERAL CATALYST HEALTH ASSURANCE"
+        ])
+        assert derive_sponsor_ids(families).nunique() == 1, "the rule pools them"
+        overrides = pd.DataFrame(
+            [("GENERAL ATLANTIC MANAGED ACCOUNT", "GENERAL ATLANTIC", "high", ""),
+             ("GENERAL CATALYST HEALTH ASSURANCE", "GENERAL CATALYST", "high", "")],
+            columns=["firm_id", "sponsor_id", "confidence", "reason"],
+        )
+        assert assign_sponsor_ids(families, overrides).nunique() == 2
+
+    def test_families_without_an_override_keep_the_derived_sponsor(self):
+        families = pd.Series(["PERMIRA", "PERMIRA GROWTH OPPORTUNITIES"])
+        overrides = pd.DataFrame(
+            [("SOMETHING ELSE", "OTHER", "high", "")],
+            columns=["firm_id", "sponsor_id", "confidence", "reason"],
+        )
+        assert list(assign_sponsor_ids(families, overrides)) == ["PERMIRA", "PERMIRA"]
+
+    def test_duplicate_family_row_is_rejected(self, tmp_path):
+        path = tmp_path / "s.csv"
+        path.write_text(
+            "firm_id,sponsor_id,confidence,reason\nA,X,high,\nA,Y,high,\n"
+        )
+        with pytest.raises(ValueError, match="maps the same family twice"):
+            load_sponsor_overrides(path)
+
+    def test_shipped_sponsor_overrides_are_well_formed(self):
+        overrides = load_sponsor_overrides()
+        assert not overrides.empty
+        assert (overrides["sponsor_id"] != "").all()
+        assert (overrides["reason"] != "").all(), "every hand mapping states why"
+        assert set(overrides["confidence"]) <= {"high", "medium", "low"}
+
+    def test_sponsor_count_never_exceeds_family_count(self):
+        families = pd.Series([
+            "SILVER LAKE PARTNERS", "SILVER LAKE TECHNOLOGY INVESTORS", "PERMIRA"
+        ])
+        sponsors = assign_sponsor_ids(families, pd.DataFrame(
+            columns=["firm_id", "sponsor_id", "confidence", "reason"]))
+        assert sponsors.nunique() <= families.nunique()

@@ -49,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from pefund.ingest.base import (  # noqa: E402
     add_sequence_numbers,
     apply_firm_overrides,
+    assign_sponsor_ids,
     deduplicate_share_classes,
     flag_vintage_anomalies,
     load_firm_overrides,
@@ -107,6 +108,9 @@ def build_regime(raw: pd.DataFrame, overrides: pd.DataFrame) -> tuple[pd.DataFra
     df["firm_id_raw"] = normalise_firm_ids(df)
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"], overrides)
     df["fund_number"] = parse_fund_number(df["fund_name"])
+    # Sponsor sits above family: two families under one firm share an
+    # investment committee, so their residuals are not independent.
+    df["sponsor_id"] = assign_sponsor_ids(df["firm_id"])
 
     n_rows = len(df)
     df, dedup = deduplicate_share_classes(df)
@@ -125,6 +129,7 @@ def build_regime(raw: pd.DataFrame, overrides: pd.DataFrame) -> tuple[pd.DataFra
         "after_share_class_dedup": len(df) + len(dedup),
         "funds_with_tvpi": len(df),
         "families": df["firm_id"].nunique(),
+        "sponsors": df["sponsor_id"].nunique(),
         "families_2plus": int((df.groupby("firm_id").size() >= 2).sum()),
         "lagged_pairs": int(panel["y_lag"].notna().sum()),
     }
@@ -137,6 +142,7 @@ def irr_panel(raw: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
     df["firm_id_raw"] = normalise_firm_ids(df)
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"], overrides)
     df["fund_number"] = parse_fund_number(df["fund_name"])
+    df["sponsor_id"] = assign_sponsor_ids(df["firm_id"])
     df, _ = deduplicate_share_classes(df)
     df = add_sequence_numbers(df)
     df, _ = flag_vintage_anomalies(df)
@@ -144,6 +150,33 @@ def irr_panel(raw: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
     metrics = df[["fund_id", "net_irr"]].copy()
     funds = df.drop(columns=["net_irr"])
     return build_panel(funds, metrics, "net_irr", log=False)
+
+
+def _row_with_cluster(data, name, cluster_on, **kwargs) -> dict:
+    """One specification row, clustered on the given dimension."""
+    try:
+        fit = estimate(data, name, vintage_fe=True, cluster_on=cluster_on, **kwargs)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  {name}: NOT ESTIMABLE -- {exc}")
+        return {"specification": name, "beta": np.nan, "note": str(exc)[:80]}
+
+    row = fit.as_row()
+    row["clustered_on"] = cluster_on[0]
+    row["n_clusters"] = int(data.loc[fit.model.model.data.row_labels, cluster_on[0]].nunique())
+    try:
+        boot = wild_cluster_bootstrap(
+            data, name, vintage_fe=True, cluster_col=cluster_on[0],
+            n_boot=N_BOOT, **kwargs
+        )
+        row["p_bootstrap"] = round(boot.p_bootstrap, 4)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  {name}: bootstrap failed -- {exc}")
+        row["p_bootstrap"] = np.nan
+
+    row["ci95_low"] = round(fit.beta - 1.96 * fit.se, 4)
+    row["ci95_high"] = round(fit.beta + 1.96 * fit.se, 4)
+    row["includes_zero"] = bool(row["ci95_low"] <= 0 <= row["ci95_high"])
+    return row
 
 
 def specification_rows(panel: pd.DataFrame, irr: pd.DataFrame) -> list[dict]:
@@ -163,33 +196,22 @@ def specification_rows(panel: pd.DataFrame, irr: pd.DataFrame) -> list[dict]:
          irr[~irr["not_meaningful"].fillna(False).astype(bool)], dict(max_gap=1)),
     ]
 
-    rows = []
-    for name, data, kwargs in specs:
-        try:
-            fit = estimate(data, name, vintage_fe=True, cluster_on=CLUSTER, **kwargs)
-        except Exception as exc:  # noqa: BLE001
-            print(f"  {name}: NOT ESTIMABLE -- {exc}")
-            rows.append({"specification": name, "beta": np.nan, "note": str(exc)[:80]})
-            continue
+    rows = [
+        _row_with_cluster(data, name, CLUSTER, **kwargs) for name, data, kwargs in specs
+    ]
 
-        row = fit.as_row()
-        try:
-            boot = wild_cluster_bootstrap(
-                data, name, vintage_fe=True, cluster_col=CLUSTER[0],
-                n_boot=N_BOOT, **kwargs
-            )
-            row["p_bootstrap"] = round(boot.p_bootstrap, 4)
-        except Exception as exc:  # noqa: BLE001
-            print(f"  {name}: bootstrap failed -- {exc}")
-            row["p_bootstrap"] = np.nan
-
-        ci_low = fit.beta - 1.96 * fit.se
-        ci_high = fit.beta + 1.96 * fit.se
-        row["ci95_low"] = round(ci_low, 4)
-        row["ci95_high"] = round(ci_high, 4)
-        row["includes_zero"] = bool(ci_low <= 0 <= ci_high)
-        rows.append(row)
+    # The same headline regression, clustered one level up. Two families under
+    # one firm share an investment committee and deal flow, so their residuals
+    # are correlated; clustering on family alone treats them as independent and
+    # understates the standard error. The point estimate cannot move -- only
+    # the standard error and everything derived from it.
+    rows.append(
+        _row_with_cluster(
+            mature, "3s. Headline, clustered on SPONSOR", ("sponsor_id",), max_gap=1
+        )
+    )
     return rows
+
 
 
 def _row(data, name, **kwargs) -> dict:
@@ -316,6 +338,7 @@ def main() -> None:
         "after_share_class_dedup": "after share-class dedup",
         "funds_with_tvpi": "funds with a computable TVPI",
         "families": "distinct fund families",
+        "sponsors": "distinct sponsors",
         "families_2plus": "families with 2+ funds",
         "lagged_pairs": "lagged pairs (the estimation sample)",
     }
@@ -337,7 +360,8 @@ def main() -> None:
     table = pd.DataFrame(rows)
     table.to_csv(DATA / "real_specifications.csv", index=False)
     show = [c for c in ["specification", "beta", "std_error", "ci95_low", "ci95_high",
-                        "p", "p_bootstrap", "n_funds", "n_firms"] if c in table.columns]
+                        "p", "p_bootstrap", "n_funds", "clustered_on", "n_clusters"]
+            if c in table.columns]
     print(table[show].to_string(index=False))
 
     # ------------------------------------------------- mapping robustness

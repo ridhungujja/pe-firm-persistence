@@ -375,6 +375,79 @@ def deduplicate_share_classes(
     return out, pd.DataFrame(report_rows)
 
 
+#: Leading words that are not a sponsor's name.
+_SPONSOR_STOPWORDS = ("THE",)
+
+#: Hand-recorded family -> sponsor corrections, for the cases the leading-token
+#: rule gets wrong.
+DEFAULT_SPONSOR_OVERRIDES_PATH = (
+    Path(__file__).resolve().parents[3] / "data" / "sponsor_overrides.csv"
+)
+
+
+def derive_sponsor_ids(family_ids: pd.Series) -> pd.Series:
+    """First-pass sponsor identifier: the family's leading token.
+
+    A sponsor is the firm; a family is one of its fund series. Silver Lake
+    Partners and Silver Lake Technology Investors are two families under one
+    sponsor, and their funds are picked by overlapping people from overlapping
+    deal flow. Treating them as independent clusters understates the standard
+    error.
+
+    The rule is deliberately crude, for the same reason `normalise_firm_ids`
+    is: a cleverer one would be wrong in ways nobody could audit. It groups
+    correctly wherever a sponsor's families all begin with its name, which is
+    the common case, and it fails visibly where two firms share a first word
+    ("General Atlantic" and "General Catalyst") or where the first word is a
+    programme label rather than a manager ("CalPERS Corporate Partners" is run
+    by an outside GP). Those cases are hand-recorded in
+    `data/sponsor_overrides.csv` rather than patched into the rule.
+    """
+    def one(family: object) -> object:
+        if not isinstance(family, str) or not family.strip():
+            return family
+        tokens = family.split()
+        if len(tokens) > 1 and tokens[0] in _SPONSOR_STOPWORDS:
+            tokens = tokens[1:]
+        return tokens[0]
+
+    return family_ids.map(one)
+
+
+def load_sponsor_overrides(path: str | Path | None = None) -> pd.DataFrame:
+    """Read the hand-recorded family -> sponsor map."""
+    path = Path(path) if path is not None else DEFAULT_SPONSOR_OVERRIDES_PATH
+    cols = ["firm_id", "sponsor_id", "confidence", "reason"]
+    if not Path(path).exists():
+        return pd.DataFrame(columns=cols)
+
+    df = pd.read_csv(path, comment="#", dtype=str).fillna("")
+    missing = set(cols) - set(df.columns)
+    if missing:
+        raise ValueError(f"{path} is missing columns: {sorted(missing)}")
+
+    dupes = df.loc[df["firm_id"].duplicated(), "firm_id"].tolist()
+    if dupes:
+        raise ValueError(f"{path} maps the same family twice: {sorted(set(dupes))}")
+    return df
+
+
+def assign_sponsor_ids(
+    family_ids: pd.Series, overrides: pd.DataFrame | None = None
+) -> pd.Series:
+    """Family -> sponsor, deriving by leading token then applying overrides."""
+    if overrides is None:
+        overrides = load_sponsor_overrides()
+    sponsors = derive_sponsor_ids(family_ids)
+    if overrides.empty:
+        return sponsors
+    mapping = dict(zip(overrides["firm_id"], overrides["sponsor_id"]))
+    return pd.Series(
+        [mapping.get(f, s) for f, s in zip(family_ids, sponsors)],
+        index=family_ids.index,
+    )
+
+
 def add_sequence_numbers(funds: pd.DataFrame) -> pd.DataFrame:
     """Rank each firm's funds by vintage to get the sequence number.
 

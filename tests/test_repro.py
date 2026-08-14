@@ -89,9 +89,29 @@ class TestShippedResults:
         if not path.exists():
             pytest.skip("run analysis/run_real_analysis.py first")
         table = pd.read_csv(path)
-        assert len(table) == 7, "all seven WORK_BRIEF 2.2 rows must be present"
+        # The seven WORK_BRIEF 2.2 rows, plus the sponsor-clustered rerun of
+        # the headline. Asserting on the numbered rows rather than the total
+        # keeps this from silently passing if a row is dropped and another added.
+        numbered = table[table["specification"].str.match(r"[1-7]\.")]
+        assert len(numbered) == 7, "all seven WORK_BRIEF 2.2 rows must be present"
+        assert table["specification"].str.startswith("3s.").any(), (
+            "the sponsor-clustered headline must be present"
+        )
         assert table["beta"].notna().all(), "no row may be left unestimated"
         assert "p_bootstrap" in table.columns
+
+    def test_sponsor_clustering_changes_only_the_standard_error(self, repo_data):
+        path = repo_data / "real_specifications.csv"
+        if not path.exists():
+            pytest.skip("run analysis/run_real_analysis.py first")
+        table = pd.read_csv(path).set_index("specification")
+        family = table[table.index.str.contains("HEADLINE")].iloc[0]
+        sponsor = table[table.index.str.startswith("3s.")].iloc[0]
+        # Clustering is a variance assumption; it cannot move the point estimate.
+        assert family["beta"] == pytest.approx(sponsor["beta"], rel=1e-9)
+        assert sponsor["n_clusters"] < family["n_clusters"], (
+            "sponsors must be fewer than families, or the mapping did nothing"
+        )
 
     def test_headline_row_is_labelled(self, repo_data):
         path = repo_data / "real_specifications.csv"

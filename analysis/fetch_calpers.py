@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from pefund.ingest.base import (  # noqa: E402
     add_sequence_numbers,
     apply_firm_overrides,
+    assign_sponsor_ids,
     deduplicate_share_classes,
     flag_vintage_anomalies,
     normalise_firm_ids,
@@ -63,6 +64,7 @@ def main() -> None:
     df["firm_id_raw"] = normalise_firm_ids(df)
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"])
     df["fund_number"] = parse_fund_number(df["fund_name"])
+    df["sponsor_id"] = assign_sponsor_ids(df["firm_id"])
 
     # Share classes must collapse before sequence numbering, or each class
     # becomes its own step in the series.
