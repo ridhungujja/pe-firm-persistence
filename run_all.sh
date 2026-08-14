@@ -62,8 +62,17 @@ python analysis/build_family_review.py
 step "Persistence estimates (headline output)"
 python analysis/run_real_analysis.py
 
+step "Family-name numeral diagnostic"
+python analysis/diagnose_numerals.py
+
 step "Cross-plan measurement error"
 python analysis/run_overlap.py
+
+step "Vintage-label error simulation"
+python analysis/simulate_vintage_error.py
+
+step "Minimum detectable effect"
+python analysis/minimum_detectable_effect.py
 
 step "PME from the snapshot archive"
 python analysis/run_pme.py

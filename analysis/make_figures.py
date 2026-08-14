@@ -125,7 +125,10 @@ def figure_coefficients() -> None:
             tick.set_color(ORANGE)
             tick.set_fontweight("bold")
 
-    ax.set_xlabel("beta on predecessor log TVPI  (95% CI, SEs clustered on family)")
+    ax.set_xlabel(
+        "beta on predecessor log TVPI  (95% CI; SEs clustered on family, "
+        "except row 3s on sponsor)"
+    )
     ax.set_title(
         "Persistence estimate across specifications\n"
         "orange = headline (mature funds, adjacent pairs); the interval includes zero",
