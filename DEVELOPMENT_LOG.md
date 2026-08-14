@@ -1210,3 +1210,125 @@ the previous morning summary as the lowest-confidence item and the thing
 driving the headline attenuation figure. Both are now resolved.
 
 Tests: 221 → 224.
+
+---
+
+## Item 10. Offline reproduction verified
+
+Cloned to a temp directory and ran `./run_all.sh --offline` from scratch.
+Every number reproduces exactly:
+
+| | value |
+|---|---|
+| headline β (family clusters) | 0.2142, SE 0.1381, 39 clusters |
+| headline β (sponsor clusters) | 0.2142, SE 0.1398, 33 clusters |
+| reliability λ | 0.9860, CI [0.9630, 0.9950] |
+| MDE at 80% power | 0.435 family / 0.430 sponsor |
+| PME sample | 63 funds |
+
+217 passed, 7 skipped in the clone. The skips are the shipped-table tests,
+which correctly stand down when the gitignored result CSVs are absent from a
+fresh checkout; they run in the working copy.
+
+`run_all.sh` now also runs the three new scripts — numeral diagnostic,
+vintage-error simulation, minimum detectable effect.
+
+---
+
+# SUMMARY
+
+**All ten items complete.** 12 commits from `ec1e799`. Tests 191 → 224, all
+passing. Offline reproduction verified from a clean clone.
+
+## Updated specification table
+
+| specification | β | SE | 95% CI | p | p_boot | n | clusters |
+|---|---|---|---|---|---|---|---|
+| 1. All funds, vintage FE | 0.390 | 0.139 | [0.118, 0.663] | 0.005 | 0.006 | 129 | 75 |
+| 2. Mature only, vintage FE | 0.248 | 0.109 | [0.035, 0.461] | 0.023 | 0.045 | 87 | 51 |
+| **3. Mature, adjacent — HEADLINE** | **0.214** | **0.138** | **[−0.057, 0.485]** | 0.121 | **0.187** | 65 | 39 fam |
+| **3s. Same, clustered on SPONSOR** | **0.214** | **0.140** | **[−0.060, 0.488]** | 0.125 | **0.177** | 65 | **33 spon** |
+| 4. + log commitment | 0.215 | 0.145 | [−0.069, 0.500] | 0.138 | 0.223 | 65 | 39 |
+| 5. + fund number | 0.193 | 0.136 | [−0.073, 0.459] | 0.156 | 0.212 | 65 | 39 |
+| 6. Excl. vintage anomalies | 0.214 | 0.138 | [−0.057, 0.485] | 0.121 | 0.187 | 65 | 39 |
+| 7. Dependent = net IRR | 0.123 | 0.110 | [−0.093, 0.339] | 0.263 | 0.320 | 63 | 37 |
+| 8. Winsorised 1/99 | 0.214 | 0.138 | [−0.057, 0.485] | 0.122 | 0.187 | 65 | 39 |
+| 8. Winsorised 5/95 | 0.222 | 0.158 | [−0.087, 0.532] | 0.158 | 0.219 | 65 | 39 |
+| 9. Families with 3+ funds | 0.148 | 0.211 | [−0.265, 0.562] | 0.482 | 0.696 | 44 | 18 |
+
+## What changed
+
+**The headline estimate did not move.** β is 0.214 throughout. What changed is
+what can be said about it.
+
+1. **Sponsor clustering** (item 1) — SE 0.138 → 0.140, 39 families → 33
+   sponsors. Smaller than expected: only 6 of 39 headline families share a
+   sponsor. Across the whole panel the compression is much larger, 330 → 216.
+2. **Minimum detectable effect** (item 6) — **β ≈ 0.43 at 80% power**, with
+   size correctly calibrated at 0.057. Power at the estimated 0.214 is ~19%;
+   against the post-2000 literature's sub-0.15 estimates it is ~8%. This is
+   the most useful result of the run: the finding is not "no persistence" but
+   "this design could only have detected pre-2000-magnitude persistence".
+3. **Measurement error** (items 7, 9) — λ 0.944 → **0.986** on 36 comparable
+   pairs, correction 1.06× → 1.014×.
+4. **Vintage-error direction** (item 5) — established as *attenuating*, so β
+   is a lower bound with respect to that error, roughly −14%.
+
+## Three things I got wrong or had to correct
+
+- **The queue's vintage-bias reasoning was wrong**, and I verified rather than
+  assumed it. Mislabelled vintages attenuate β, they do not inflate it: the
+  unabsorbed shock enters the regressor as well as the residual, and
+  errors-in-variables dominates. β = 0.214 is a lower bound, not an upper one.
+- **The override file's own justification was wrong.** The BDC rows cite "D as
+  roman 500"; the strip class is `[IVXLC]`, so D and M are never consumed.
+  C, I, L, V and X are the letters actually at risk. Parametrised tests now
+  pin both halves.
+- **Item 7(b)'s ad-hoc fix was superseded by item 9.** Dropping "the single
+  largest gap" patched a symptom. The cause is that 7 of 43 pairs are Oregon
+  secondary sales — realised transaction prices with zero NAV compared against
+  live marks. Excluding them on principle gives the same answer with a reason
+  behind it.
+
+## Resolved from the previous run's flagged list
+
+- **Tailwind III** — was the largest flagged uncertainty. Fully explained: a
+  secondary sale by Oregon, not a matching error.
+- **VIP override** — was shipping with "confirm before publishing" in its own
+  reason field. Confirmed as Vitruvian Investment Partnership against Oregon,
+  TVPI agreeing to four decimals. Upgraded to high confidence.
+- **Vintage disagreement** — Oregon's half now settled empirically: Oregon
+  reports the fund's vintage, not its own first call (32 of 63 inception-
+  observed funds have a later first call, and never an earlier one).
+
+## Less than confident in — review here first
+
+1. **The literature comparison in item 6 is from memory.** The Kaplan-Schoar
+   "0.4–0.6" and post-2000 "below 0.15" figures place an order of magnitude;
+   they are not strictly comparable to this specification (different dependent
+   variables, lag definitions, samples). RESULTS.md says so, but the MDE
+   argument leans on them and they should be checked against the papers.
+2. **CalPERS' vintage definition is still unidentified.** Established that it
+   is systematically later than Oregon's, never earlier; not established what
+   it is. Its methodology and glossary pages return 404/403 and no dated
+   CalPERS flows exist to test against.
+3. **`TPG RISE` as a separate sponsor from `TPG`** — medium confidence. TPG
+   raises the Rise funds but governs them as a separate impact platform. Both
+   are singletons in the headline sample so nothing turns on it, but it is a
+   judgement call.
+4. **11 medium-confidence merges remain** — BDC ×3, General Catalyst Health
+   Assurance ×2, Genstar Opportunities ×2, Lightspeed Inception/Ignite ×4. The
+   high-confidence-only regime gives β = 0.245 against 0.214, so they are not
+   driving the estimate.
+5. **λ = 0.986 rests on 36 pairs.** The bootstrap interval [0.963, 0.995] is
+   narrow, but a reliability ratio from 36 observations should not be quoted
+   as precise, and it remains a *floor* — both plans receive the same GP
+   valuation, so stale-marks error cancels in the difference.
+
+## Suggested next step
+
+Unchanged and now quantified: **more families**. The MDE says precision is
+bounded by 39 clusters, and no amount of care with the existing data moves it.
+CalSTRS and Washington State publish the same shape of data; each new plan
+also adds cross-plan overlap pairs, which is the only route to a
+measurement-error estimate that is not a floor.
