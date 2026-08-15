@@ -21,8 +21,10 @@ data/persistence_results.csv
 data/share_class_dedup.csv
 data/vintage_anomalies.csv
 data/oregon_pme.csv
-data/calpers_raw.csv            # working copy; the dated capture in
-                                # data/snapshots/ is tracked instead
+# Working copy of the raw CalPERS capture. The dated copy under
+# data/snapshots/ is the tracked one. (No trailing comments on the same line
+# as a pattern - git treats them as part of the pattern.)
+data/calpers_raw.csv
 data/real_specifications.csv
 data/all_specifications.csv
 data/robustness_rows.csv
@@ -35,6 +37,9 @@ data/spearman_within.csv
 data/simulation_validation.csv
 data/overlap_pairs.csv
 data/attenuation.csv
+data/numeral_diagnostic.csv
+data/minimum_detectable_effect.csv
+data/vintage_error_simulation_beta*.csv
 
 # Re-downloadable from the Kenneth French Data Library.
 data/benchmarks/

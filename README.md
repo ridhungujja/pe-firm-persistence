@@ -1,74 +1,84 @@
-# Private equity fund performance: measurement and persistence
+# Do good private equity funds stay good?
 
-Estimating whether private equity general partners show persistent skill, and
-measuring how far the answer moves when you fix the sample problems the data
-usually hides.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
-This is deliberately not a dashboard. The deliverable is an estimate with a
-standard error and an argument about what it identifies.
+**The question.** A private equity firm raises a fund, spends about a decade
+investing it, returns the money, then raises the next one. If a firm's last
+fund did well, should you expect its next one to do well too?
 
----
+This is not an academic question. Pension funds and endowments allocate
+hundreds of billions by exactly this logic — they back managers whose previous
+funds performed. If past performance predicts future performance, that is
+rational. If it does not, the industry's central selection heuristic rests on
+nothing.
 
-## What this project shows — the ninety-second version
+**The answer, in this sample.** Regress each fund's performance on its
+predecessor's. The coefficient β is the answer: β = 1 would mean performance
+carries over completely, β = 0 that the previous fund tells you nothing.
 
-**The question.** Does a strong fund predict a strong successor? Kaplan and
-Schoar (2005) found it did; later work using better data found the effect had
-weakened substantially after the early 2000s.
+> ### β = 0.214,  95% CI [−0.057, 0.485]
+> 65 fund pairs · 39 fund families · bootstrap *p* = 0.19
 
-**The answer, on this sample.** A persistence coefficient of
+**The interval includes zero.** On this data you cannot distinguish
+persistence from luck.
 
-> **β = 0.214, 95% CI [−0.057, 0.485]**, bootstrap p = 0.187
-> — 65 fund pairs across 39 fund families
+![Persistence estimate across specifications](figures/coefficients.png)
 
-**The interval includes zero.** This sample cannot distinguish persistence from
-noise, and [RESULTS.md](RESULTS.md) sets out precisely why.
+**Why that is more interesting than it sounds.** Two things make this a result
+rather than a shrug.
 
-**The point is the gap between specifications, not the number.** The same data
-yields a decisive-looking β = 0.390 (p = 0.005) if you pool non-adjacent fund
-pairs and keep funds too young to have realised anything. Tightening to
-adjacent pairs of mature funds — the LP's actual decision problem, fund k
-against fund k+1 — takes it to 0.214 and the significance disappears. That gap
-is the methodological content.
+*The answer depends on how carefully you ask.* Run the same data loosely —
+pool funds raised years apart, keep funds too young to have sold anything —
+and you get β = 0.390 with *p* = 0.005, which looks conclusive. Tighten it to
+consecutive funds of the same series that are old enough to have realised
+returns, and it falls to 0.214 and the significance evaporates. Same data,
+opposite conclusion. That gap is the point of the project.
 
-**The data.** CalPERS (462 funds, HTML) and Oregon PERS (18 quarterly PDFs back
-to 2021, parsed with pdfplumber). Both are public-disclosure tables, the free
-substitute for Preqin. 43 funds appear in both at the same reporting date —
-36 of them comparable, the rest sold by Oregon in the secondary market —
-which gives a direct read on cross-plan reporting noise.
+*And the design could never have found what the literature claims.* A power
+analysis on the actual sample puts the **minimum detectable effect at β ≈ 0.43**
+— roughly the persistence reported for pre-2000 funds. Against the effect sizes
+modern studies report (below ~0.15), this design has about **8% power**. So a
+null result was close to guaranteed regardless of the truth. That is a fact
+about having 39 clusters, not about private equity — and it is a far stronger
+statement than "we found nothing".
 
-**What the design could detect.** Power analysis on the actual sample puts the
-minimum detectable effect at **β ≈ 0.43** — a Kaplan-Schoar-era magnitude. The
-post-2000 literature reports persistence well below 0.15, against which this
-design has ~8% power. So a null was close to guaranteed regardless of the
-truth; that is a fact about 39 clusters, not about private equity.
-
-**What it cannot support.** Any claim that persistence is present, or that it is
-absent. Any claim about realised performance from PME — 59 of 63 PME-eligible
-funds carry ~99% of their value as unrealised GP marks. Any claim about
-strategy, since neither plan publishes one.
-
-![beta across specifications](figures/coefficients.png)
+Full write-up in **[RESULTS.md](RESULTS.md)**.
 
 ---
 
-## Why this framing
+## What the data is
 
-"Do good funds stay good?" is a question with a real empirical literature and a
-known trajectory. Replicating that arc requires panel methods, a defensible
-benchmark, and an honest treatment of selection — which is what an econometrics
-supervisor wants to see. A returns calculator demonstrates none of it.
+Two US public pension plans publish, fund by fund, what they paid in and got
+back — because state law requires it. That is the free substitute for the
+commercial databases (Preqin, Burgiss) this literature normally runs on.
+
+- **CalPERS** — 462 funds, an HTML table, current quarter only.
+- **Oregon PERS** — 18 quarterly PDF reports archived back to 2021.
+- **43 funds appear in both** at the same reporting date, which gives a rare
+  direct measurement of how noisily these figures are reported.
+
+**What this cannot support.** Any claim that persistence is present, or that it
+is absent. Any claim about *realised* returns from PME — 59 of the 63
+PME-eligible funds still carry ~99% of their value as unrealised manager
+valuations. Any split by strategy, since neither plan publishes one.
 
 ## Quickstart
 
 ```bash
+git clone https://github.com/ridhungujja/pe-persistence.git
+cd pe-persistence
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q          # 224 tests
-./run_all.sh --offline       # reproduce every table and figure from the cached archive
+
+python -m pytest -q        # 224 tests
+./run_all.sh --offline     # every table and figure, from the cached data
 ```
 
-`./run_all.sh` without `--offline` re-fetches both plans first. Offline mode is
-the reproducible one: Oregon rotates old quarters off its site, so an online
-run later analyses a different sample without saying so.
+`--offline` uses the snapshot archive committed to this repository and needs no
+network. It is the reproducible path: Oregon rotates old quarters off its
+website, so a live re-fetch months from now analyses a *different* sample
+without saying so. Drop the flag to re-download both plans.
 
 ## Results
 
@@ -190,31 +200,55 @@ Buyout portfolios are levered and tilted toward smaller, cheaper companies, so
 the market factor is not their correct risk benchmark; `load_factors` returns
 the size and value factors too, so a second benchmark is cheap to build.
 
+## Repository map
+
+```
+README.md            this file
+RESULTS.md           the write-up: estimand, table, inference, limitations
+DEVELOPMENT_LOG.md   design decisions, dead ends, things that turned out wrong
+run_all.sh           full pipeline; --offline reproduces from cached data
+
+src/pefund/
+  metrics.py         TVPI/DPI/RVPI, XIRR, Kaplan-Schoar PME, Direct Alpha
+  persistence.py     the estimator: vintage FE, clustered SEs, wild cluster
+                     bootstrap, permutation tests, leave-one-out
+  ingest/
+    base.py          canonical schema, family matching, share-class dedup,
+                     fund-number parsing, vintage diagnostics, flow rebuild
+    calpers.py       CalPERS HTML adapter
+    oregon.py        Oregon PERS PDF adapter (pdfplumber)
+    french.py        Kenneth French factors -> total-return benchmark
+    manifest.py      provenance + integrity hashes for the snapshot archive
+    synthetic.py     simulation with known skill, used to validate the estimator
+
+analysis/            one script per output; each says what it produces
+data/
+  snapshots/         the committed archive + MANIFEST.csv  (never overwritten)
+  firm_overrides.csv    hand-checked fund-family corrections
+  sponsor_overrides.csv hand-checked family -> sponsor map
+figures/             generated by analysis/make_figures.py
+tests/               224 tests, no network access
+```
+
 ## What is implemented
 
-**Measurement** (`src/pefund/metrics.py`) — DPI, RVPI, TVPI, XIRR on irregular
-dates (returns NaN rather than a fake root when no sign change exists),
+**Measurement** (`metrics.py`) — DPI, RVPI, TVPI, XIRR on irregular dates
+(returns NaN rather than a fake root when no sign change exists),
 Kaplan-Schoar PME, Direct Alpha, Long-Nickels PME with its failure mode
 guarded. Every metric is tested against a case with an analytic answer.
 
-**Estimation** (`src/pefund/persistence.py`) — AR(1) in fund sequence with
-vintage fixed effects and clustered standard errors; fund-number gaps so a
-specification can require *adjacent* funds; wild cluster bootstrap; quartile
-transitions with a within-vintage permutation test; winsorising,
-leave-one-out, and a rank-correlation check that assumes no functional form.
+**Estimation** (`persistence.py`) — AR(1) in fund sequence with vintage fixed
+effects and clustered standard errors; fund-number gaps so a specification can
+require *adjacent* funds; wild cluster bootstrap; quartile transitions with a
+within-vintage permutation test; winsorising, leave-one-out, and a rank
+correlation that assumes no functional form.
 
-**Ingestion** (`src/pefund/ingest/`) — canonical schema; GP-name normalisation
-with hand-checked overrides; share-class deduplication; fund-number parsing;
-a vintage-integrity diagnostic; cash-flow reconstruction by differencing
-snapshots. Adapters: `calpers.py` (HTML), `oregon.py` (PDF), `french.py`
-(benchmark), `synthetic.py` (simulation).
+**Ingestion** (`ingest/`) — canonical schema; fund-family matching with
+hand-checked overrides; share-class deduplication; a vintage-integrity
+diagnostic; cash-flow reconstruction by differencing snapshots.
 
-**Analysis** (`analysis/`) — `fetch_calpers.py`, `fetch_oregon.py`,
-`build_family_review.py`, `run_real_analysis.py` (the headline output),
-`run_overlap.py`, `run_pme.py`, `run_analysis.py`, `make_figures.py`.
-
-Data conventions, the family-matching rules, and the override schema are in
-[CLAUDE.md](CLAUDE.md). Design decisions and the reasoning behind them are in
+Conventions and the override schema are documented in [CLAUDE.md](CLAUDE.md);
+design decisions and the reasoning behind them in
 [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
 
 ## Known limitations

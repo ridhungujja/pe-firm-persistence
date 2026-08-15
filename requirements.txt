@@ -5,6 +5,10 @@ statsmodels>=0.14
 patsy>=0.5
 matplotlib>=3.8
 pytest>=8.0
+
+# Backend for pandas.read_html, used by the CalPERS adapter. Imported by
+# pandas rather than by this code, so it will not show up in an import scan.
 lxml>=5.0
+
+# Table extraction from the Oregon PERS quarterly PDFs.
 pdfplumber>=0.11
-pypdf>=4.0
