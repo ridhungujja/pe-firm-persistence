@@ -174,6 +174,15 @@ to compare returns across partnerships" and "HAVE NOT been approved by the
 individual general partners". That is a primary-source statement of the
 measurement problem and it is quoted in `ingest/oregon.py`.
 
+### A note on redistribution
+
+The snapshot archive under `data/snapshots/` reproduces fund performance
+disclosures published by CalPERS and Oregon PERS under state public records
+law. Those files are public records, included here so the analysis is
+reproducible after the plans rotate them off their own sites. They are not
+covered by this repository's MIT license and remain subject to whatever terms
+their publishers apply. The code is MIT.
+
 ### Benchmark — Kenneth French market factor
 
 PME discounts cash flows by a public-market index, so the index is the
