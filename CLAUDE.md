@@ -5,15 +5,13 @@ Context for Claude Code sessions on this repository.
 ## What this project is
 
 An empirical study of performance persistence among private equity general
-partners, built as a portfolio piece for econometrics internship applications.
-The deliverable is **an estimate with a standard error and an argument about
-what it identifies** — not a dashboard, not a calculator. Anything that makes
-this look more like a finance tool and less like an empirical paper is moving
-in the wrong direction.
+partners. The deliverable is **an estimate with a standard error and an
+argument about what it identifies** — not a dashboard, not a calculator.
+Anything that makes this look more like a finance tool and less like an
+empirical paper is moving in the wrong direction.
 
-The owner is an undergraduate applying to econometrics internships. Explain
-econometric reasoning rather than assuming it; explain terminal and git
-mechanics rather than assuming them.
+Explain econometric reasoning rather than assuming it; explain terminal and
+git mechanics rather than assuming them.
 
 ## The estimand
 
