@@ -71,7 +71,7 @@ cd pe-persistence
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-python -m pytest -q        # 224 tests
+python -m pytest -q        # 224 tests (8 skip until the pipeline has run)
 ./run_all.sh --offline     # every table and figure, from the cached data
 ```
 

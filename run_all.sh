@@ -39,8 +39,11 @@ python -m pytest -q
 
 if [ "$OFFLINE" -eq 1 ]; then
   step "Offline mode: skipping network fetches"
-  if [ ! -f data/calpers_raw.csv ]; then
-    echo "data/calpers_raw.csv missing; run once without --offline first" >&2
+  # The working copy is gitignored; a fresh clone has only the dated capture
+  # in the archive, which the analysis scripts fall back to.
+  if [ ! -f data/calpers_raw.csv ] && ! ls data/snapshots/calpers_raw_*.csv >/dev/null 2>&1; then
+    echo "no CalPERS capture found in data/ or data/snapshots/;" >&2
+    echo "run once without --offline first" >&2
     exit 1
   fi
   if ! ls data/snapshots/oregon_*.csv >/dev/null 2>&1; then
