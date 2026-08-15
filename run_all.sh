@@ -32,6 +32,23 @@ if [ -d .venv ]; then
   source .venv/bin/activate
 fi
 
+# A virtualenv built at a different path still activates but leaves PATH
+# pointing at a directory that no longer exists, so the first python call fails
+# with a bare "command not found". Say what actually happened instead.
+if ! command -v python >/dev/null 2>&1; then
+  echo "python not found on PATH." >&2
+  if [ -d .venv ]; then
+    echo "A .venv exists here but does not work - it was most likely built" >&2
+    echo "under a different path. Rebuild it:" >&2
+    echo "  rm -rf .venv && python3 -m venv .venv" >&2
+    echo "  .venv/bin/pip install -r requirements.txt" >&2
+  else
+    echo "Create one:  python3 -m venv .venv" >&2
+    echo "             .venv/bin/pip install -r requirements.txt" >&2
+  fi
+  exit 1
+fi
+
 step() { printf '\n\033[1m=== %s\033[0m\n' "$1"; }
 
 step "Tests"

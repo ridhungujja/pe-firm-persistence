@@ -1,326 +1,290 @@
 # Do good private equity funds stay good?
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+A private equity firm raises a fund. It spends about ten years buying
+companies, improving them, and selling them. Then it raises another fund and
+does it again.
 
-**The question.** A private equity firm raises a fund, spends about a decade
-investing it, returns the money, then raises the next one. If a firm's last
-fund did well, should you expect its next one to do well too?
+This project asks one question. If a firm's last fund did well, does its next
+fund do well too?
 
-This is not an academic question. Pension funds and endowments allocate
-hundreds of billions by exactly this logic — they back managers whose previous
-funds performed. If past performance predicts future performance, that is
-rational. If it does not, the industry's central selection heuristic rests on
-nothing.
+The question matters because pension funds and university endowments decide
+where to put money largely on this basis. They back firms whose previous funds
+performed. If past performance predicts future performance, that is sensible.
+If it does not, a lot of money is being allocated on a pattern that is not
+there.
 
-**The answer, in this sample.** Regress each fund's performance on its
-predecessor's. The coefficient β is the answer: β = 1 would mean performance
-carries over completely, β = 0 that the previous fund tells you nothing.
+I answer the question with data that US public pension plans are required by
+law to publish. The estimate is in `RESULTS.md`. The code is in this
+repository and runs end to end.
 
-> ### β = 0.214,  95% CI [−0.057, 0.485]
-> 65 fund pairs · 39 fund families · bootstrap *p* = 0.19
+## What I found
 
-**The interval includes zero.** On this data you cannot distinguish
-persistence from luck.
+I regress each fund's return on the return of the firm's previous fund. The
+coefficient on the previous fund is the answer. Call it beta. A beta of 1 means
+performance carries over completely. A beta of 0 means the previous fund tells
+you nothing.
 
 ![Persistence estimate across specifications](figures/coefficients.png)
 
-**Why that is more interesting than it sounds.** Two things make this a result
-rather than a shrug.
+Beta is 0.214. The 95% confidence interval runs from -0.057 to 0.485. The
+interval contains 0. On this data I cannot tell persistence apart from luck.
 
-*The answer depends on how carefully you ask.* Run the same data loosely —
-pool funds raised years apart, keep funds too young to have sold anything —
-and you get β = 0.390 with *p* = 0.005, which looks conclusive. Tighten it to
-consecutive funds of the same series that are old enough to have realised
-returns, and it falls to 0.214 and the significance evaporates. Same data,
-opposite conclusion. That gap is the point of the project.
+That estimate uses 65 pairs of funds drawn from 39 fund families.
 
-*And the design could never have found what the literature claims.* A power
-analysis on the actual sample puts the **minimum detectable effect at β ≈ 0.43**
-— roughly the persistence reported for pre-2000 funds. Against the effect sizes
-modern studies report (below ~0.15), this design has about **8% power**. So a
-null result was close to guaranteed regardless of the truth. That is a fact
-about having 39 clusters, not about private equity — and it is a far stronger
-statement than "we found nothing".
+A fund family is one firm's numbered series. Blackstone Capital Partners V
+through IX is a family. Blackstone Tactical Opportunities is a different
+family, run by a different team with a different mandate, even though the same
+firm owns both. I measure persistence inside a family. Pooling everything a
+firm manages would credit a buyout team with a credit team's results.
 
-Full write-up in **[RESULTS.md](RESULTS.md)**.
+Two things about this result are worth more than the number itself.
 
----
+**The answer depends on how carefully you ask.** Run the same data loosely and
+beta is 0.390 with a p-value of 0.005, which looks conclusive. Loosely means
+two things. It means pooling funds that are not consecutive, so a 2007 fund
+gets treated as the predecessor of a 2021 fund. It means keeping funds that are
+too young to have sold anything, so their reported returns are the manager's
+own estimate of what the companies are worth. Restrict to consecutive funds
+that are old enough to have sold real assets and beta falls to 0.214. The
+significance disappears. Same data, opposite conclusion.
 
-## What the data is
+**The study could not have found what the literature reports.** I computed the
+minimum detectable effect. That is the smallest true beta this sample would
+catch most of the time. I simulated data with a known beta, ran my own test on
+it, and counted how often the test found the effect. At a true beta of 0.43 the
+test finds it 80% of the time. Below that it usually misses.
 
-Two US public pension plans publish, fund by fund, what they paid in and got
-back — because state law requires it. That is the free substitute for the
-commercial databases (Preqin, Burgiss) this literature normally runs on.
+Studies of funds raised before 2000 report betas around 0.4 to 0.6. Studies of
+funds raised after 2000 report well under 0.15. At a true beta of 0.1 my test
+finds the effect 7 times in 100. At 0.2 it finds it 19 times in 100. Those are
+measured, not interpolated.
 
-- **CalPERS** — 462 funds, an HTML table, current quarter only.
-- **Oregon PERS** — 18 quarterly PDF reports archived back to 2021.
-- **43 funds appear in both** at the same reporting date, which gives a rare
-  direct measurement of how noisily these figures are reported.
+So a null result was close to guaranteed before I started. That is a fact about
+having 39 families, not a fact about private equity. It is a stronger and more
+specific statement than "the estimate was not significant".
 
-**What this cannot support.** Any claim that persistence is present, or that it
-is absent. Any claim about *realised* returns from PME — 59 of the 63
-PME-eligible funds still carry ~99% of their value as unrealised manager
-valuations. Any split by strategy, since neither plan publishes one.
+## What you need
 
-## Quickstart
+Python 3.11 or newer. Nothing else is required to reproduce the results.
 
-```bash
-git clone https://github.com/ridhungujja/pe-persistence.git
-cd pe-persistence
-python3 -m venv .venv && source .venv/bin/activate
+Install the packages:
+
+```
 pip install -r requirements.txt
-
-python -m pytest -q        # 224 tests (8 skip until the pipeline has run)
-./run_all.sh --offline     # every table and figure, from the cached data
 ```
 
-`--offline` uses the snapshot archive committed to this repository and needs no
-network. It is the reproducible path: Oregon rotates old quarters off its
-website, so a live re-fetch months from now analyses a *different* sample
-without saying so. Drop the flag to re-download both plans.
+The data is already in this repository. You do not need to download anything.
+Two plans are included.
 
-## Results
+CalPERS publishes one HTML table covering 462 funds, and only for the current
+quarter. Oregon PERS publishes a PDF each quarter and leaves old quarters
+online. I have 18 of those, covering March 2021 to March 2026 and 490 funds.
 
-### Persistence, real data
+I commit the Oregon files rather than downloading them at run time. Oregon
+removes old quarters from its website. A file that disappears cannot be
+fetched again. Committing them also means the numbers here do not change under
+you.
 
-Standard errors clustered on family; bootstrap p from a wild cluster bootstrap
-with Rademacher weights, 9,999 replications.
+Getting those files was harder than it should have been. Oregon has used five
+different naming schemes for the same quarterly report, and files at least one
+report in the folder for the wrong year. Guessing URLs from the current scheme
+found 8 reports. Reading the links off the Treasury holdings page found 18. The
+fetcher reads the page.
 
-| Specification | β | SE | 95% CI | p | p (boot) | n |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1. All funds, vintage FE | 0.390 | 0.139 | [0.118, 0.663] | 0.005 | 0.006 | 129 |
-| 2. Mature only, vintage FE | 0.248 | 0.109 | [0.035, 0.461] | 0.023 | 0.045 | 87 |
-| **3. Mature, adjacent only — headline** | **0.214** | **0.138** | **[−0.057, 0.485]** | 0.121 | **0.187** | **65** |
-| 4. + log commitment | 0.215 | 0.145 | [−0.069, 0.500] | 0.138 | 0.223 | 65 |
-| 5. + fund number | 0.193 | 0.136 | [−0.073, 0.459] | 0.156 | 0.212 | 65 |
-| 6. Excluding vintage anomalies | 0.214 | 0.138 | [−0.057, 0.485] | 0.121 | 0.187 | 65 |
-| 7. Dependent = net IRR | 0.123 | 0.110 | [−0.093, 0.339] | 0.263 | 0.320 | 63 |
-| 8. Winsorised 5/95 | 0.222 | 0.158 | [−0.087, 0.532] | 0.158 | 0.219 | 65 |
-| 9. Families with 3+ funds | 0.148 | 0.211 | [−0.265, 0.562] | 0.482 | 0.696 | 44 |
-
-Three results behind the table:
-
-- **The family mapping is not driving it.** Re-run under three regimes — raw
-  regex stems, high-confidence merges only, all 70 merges — β is 0.270 / 0.245 /
-  0.214. The spread is well inside one standard error.
-- **No single family or vintage carries it.** Leave-one-family-out spans
-  [0.138, 0.281] over 39 refits; leave-one-vintage-out [0.118, 0.308] over 17.
-  None reaches zero.
-- **The bootstrap p exceeds the analytic p in every row.** At 20 clusters the
-  cluster-robust asymptotic rejects a true null 9–13% of the time against a
-  nominal 5%; the bootstrap holds 4–6%. The error is one-directional — it
-  manufactures persistence rather than hiding it.
-
-### Validation on simulated data
-
-The estimator is checked against a Takahashi-Alexander simulation with a
-*known* skill process before it is pointed at real data. Across six settings
-with true β from 0.00 to 0.44, every 95% interval covers the truth.
-
-![estimator recovers known beta](figures/simulation_validation.png)
-
-The simulation also separates two things usually conflated as "survivorship
-bias": truncating on the *predecessor* leaves E[y | y_lag] intact and OLS
-consistent, while censoring the *outcome* cuts β by 37%. And **IRRs do not
-aggregate** — averaging fund IRRs answers a different question from pooling
-cash flows, so the scripts report equal-weighted against capital-weighted PME
-to keep the gap visible.
-
-## Data
-
-Two public pension plans, both free and both published under state disclosure
-law. Between them they give 462 CalPERS funds, 18 quarterly Oregon snapshots,
-and 43 funds observed in both at the same reporting date.
-
-### CalPERS — HTML, current quarter only
-
-One table, refreshed quarterly with roughly a two-quarter reporting lag
-(general partners have 120 days to deliver financials). The page carries its
-own as-of date in prose, which the adapter parses — using the download date
-instead silently misaligns the table against any other plan. Only *active*
-partnerships appear; fully exited funds are removed, which is the sample's
-most important selection problem.
-
-### Oregon PERS — quarterly PDFs, five years of archive
-
-Oregon publishes its private equity book as a PDF each quarter and leaves past
-quarters online. **The URLs cannot be built from a template.** Oregon has used
-at least five naming conventions for the same report —
+## How to run it
 
 ```
-OPERF-Private-Equity-Portfolio-Quarter-1-2021.pdf
-OPERF-Private-Equity-Q2-2022.pdf
-PrivateEquity-Q3-2023.pdf
-OPERF_Private_Equity_Portfolio_-_Quarter_4_2023.pdf
-OPERF-Private-Equity-Portfolio-Quarter-4-2025.pdf   ← filed under /2026/
+python -m pytest -q
+./run_all.sh --offline
 ```
 
-— and files at least one report in the folder for the wrong year. Probing the
-current pattern across 2014–2026 found 8 reports; reading the links off the
-[Treasury holdings page](https://www.oregon.gov/treasury/invested-for-oregon/Pages/Performance-Holdings.aspx)
-found 18. `fetch_oregon.py` therefore discovers reports rather than guessing
-URLs, and takes the year from the filename, not the folder.
+The test suite has 224 tests. On a fresh clone 8 of them skip, because they
+check tables that the pipeline has not written yet. Run the pipeline and they
+pass.
 
-The archive spans 2021-03-31 to 2026-03-31. It is committed to this repository
-because Oregon rotates old quarters off the site, so a lost snapshot cannot be
-re-fetched — and because two or more dated snapshots of the same funds are the
-only route to cash flows, both plans publishing cumulative totals rather than
-dated flows.
+`--offline` uses the committed data and needs no network. Drop the flag to
+re-download both plans. Do that only if you want fresher data, and expect the
+numbers to move, because Oregon's archive will have shifted.
 
-Oregon's report also carries an explicit warning from the plan itself that its
-IRRs "SHOULD NOT be used to assess the investment success of a partnership or
-to compare returns across partnerships" and "HAVE NOT been approved by the
-individual general partners". That is a primary-source statement of the
-measurement problem and it is quoted in `ingest/oregon.py`.
+The whole run takes about ninety seconds. Most of that is two simulation
+studies: the power calculation and a check on vintage-year errors.
 
-### A note on redistribution
+## What you get
 
-The snapshot archive under `data/snapshots/` reproduces fund performance
-disclosures published by CalPERS and Oregon PERS under state public records
-law. Those files are public records, included here so the analysis is
-reproducible after the plans rotate them off their own sites. They are not
-covered by this repository's MIT license and remain subject to whatever terms
-their publishers apply. The code is MIT.
+Tables in `data/`, as CSV. The specification table, the mapping robustness
+table, the transition test, the power curve, and the cross-plan comparison.
 
-### Benchmark — Kenneth French market factor
+Figures in `figures/`. Six of them, including the one above.
 
-PME discounts cash flows by a public-market index, so the index is the
-counterfactual the statistic is built on, not a formatting choice.
+The write-up in `RESULTS.md`. That is the paper-shaped version: what is
+estimated, the table, the inference, the limitations.
+
+A record of the work in `DEVELOPMENT_LOG.md`. Design decisions, and the things
+that turned out to be wrong.
+
+The code:
 
 ```
-https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip
+src/pefund/metrics.py       TVPI, IRR, Kaplan-Schoar PME, Direct Alpha
+src/pefund/persistence.py   the estimator and every test around it
+src/pefund/ingest/          one adapter per data source, plus shared cleaning
+analysis/                   one script per output
 ```
 
-Market total return is `Mkt-RF + RF`, compounded into a level series. Three
-reasons for this over an S&P 500 price series: it is a **total** return, and a
-price index omits roughly two points a year of dividends, which compounds to
-about 22% of terminal wealth over a ten-year fund life and inflates every PME
-by that margin; it covers the whole US market rather than large caps; and it is
-the standard benchmark in the PME literature, so estimates here are comparable
-to published ones.
+## How much you can trust it
 
-Missing months are coded `-99` or `-99.99`. They must become NaN before
-compounding — read literally, one such month multiplies the running level by
-−0.98 and destroys every value after it. `french.py` refuses to compound
-through a gap rather than returning a silently truncated series.
+I checked the estimate five ways. None of them changed the answer.
 
-Buyout portfolios are levered and tilted toward smaller, cheaper companies, so
-the market factor is not their correct risk benchmark; `load_factors` returns
-the size and value factors too, so a second benchmark is cheap to build.
+**The estimator recovers a known answer.** I simulate fund histories with a
+persistence I choose myself, then run the real estimation code on them. Across
+six settings with true betas from 0.00 to 0.44, every confidence interval
+covers the truth.
 
-## Repository map
+**Standard errors use a wild cluster bootstrap.** Funds from the same firm are
+not independent observations. The usual fix is clustering, which widens the
+error bars to account for that. Clustering relies on having many groups. I have
+39. To check whether that is enough I generated data with no persistence at
+all and counted how often each method wrongly found some. At 20 groups the
+standard method reported a false positive 9 to 13 times in 100, against the 5
+it should. The bootstrap reported 4 to 6.
 
-```
-README.md            this file
-RESULTS.md           the write-up: estimand, table, inference, limitations
-DEVELOPMENT_LOG.md   design decisions, dead ends, things that turned out wrong
-run_all.sh           full pipeline; --offline reproduces from cached data
+The bootstrap works by imposing the answer of zero on the data, then flipping
+the sign of each firm's residuals at random, thousands of times, to see how
+large a coefficient turns up by chance. Every p-value in the table is computed
+this way. Every one is larger than the standard method's. The standard method
+was manufacturing persistence, not hiding it.
 
-src/pefund/
-  metrics.py         TVPI/DPI/RVPI, XIRR, Kaplan-Schoar PME, Direct Alpha
-  persistence.py     the estimator: vintage FE, clustered SEs, wild cluster
-                     bootstrap, permutation tests, leave-one-out
-  ingest/
-    base.py          canonical schema, family matching, share-class dedup,
-                     fund-number parsing, vintage diagnostics, flow rebuild
-    calpers.py       CalPERS HTML adapter
-    oregon.py        Oregon PERS PDF adapter (pdfplumber)
-    french.py        Kenneth French factors -> total-return benchmark
-    manifest.py      provenance + integrity hashes for the snapshot archive
-    synthetic.py     simulation with known skill, used to validate the estimator
+**Fund-name matching does not drive the result.** The largest manual step in
+this project is deciding which funds belong to the same family. Names are
+inconsistent. "Advent International GPE V-D" and "Advent International GPE
+VI-A" are the same series, but a share-class letter on the end stops any simple
+rule from seeing it. I hand-checked and recorded 70 merge decisions, each with
+a reason. Running the estimate with no merges, with only the certain merges,
+and with all of them gives betas of 0.270, 0.245 and 0.214. The spread is
+smaller than one standard error.
 
-analysis/            one script per output; each says what it produces
-data/
-  snapshots/         the committed archive + MANIFEST.csv  (never overwritten)
-  firm_overrides.csv    hand-checked fund-family corrections
-  sponsor_overrides.csv hand-checked family -> sponsor map
-figures/             generated by analysis/make_figures.py
-tests/               224 tests, no network access
-```
+**No single firm or year carries it.** Dropping each family in turn and
+refitting gives betas between 0.138 and 0.281 across 39 refits. Dropping each
+year gives 0.118 to 0.308 across 17. None of them produces a negative beta.
 
-## What is implemented
+**It is not an artefact of the functional form.** Ranking funds within their
+year and correlating the ranks gives 0.230, with a permutation p-value of
+0.239. Same sign, same rough size, same conclusion, and it does not assume the
+relationship is a straight line.
 
-**Measurement** (`metrics.py`) — DPI, RVPI, TVPI, XIRR on irregular dates
-(returns NaN rather than a fake root when no sign change exists),
-Kaplan-Schoar PME, Direct Alpha, Long-Nickels PME with its failure mode
-guarded. Every metric is tested against a case with an analytic answer.
+**Reporting error is small.** 43 funds appear in both plans on the same
+reporting date. That is two independent readings of the same fund. Seven of
+them are funds Oregon sold on the secondary market, where the reported figure
+is a sale price rather than a valuation, so I exclude them. On the remaining
+36, the median disagreement between the two plans is 0.82%. Correcting the
+estimate for that much noise moves beta from 0.214 to 0.217.
 
-**Estimation** (`persistence.py`) — AR(1) in fund sequence with vintage fixed
-effects and clustered standard errors; fund-number gaps so a specification can
-require *adjacent* funds; wild cluster bootstrap; quartile transitions with a
-within-vintage permutation test; winsorising, leave-one-out, and a rank
-correlation that assumes no functional form.
+### A reasoning error that the simulation caught
 
-**Ingestion** (`ingest/`) — canonical schema; fund-family matching with
-hand-checked overrides; share-class deduplication; a vintage-integrity
-diagnostic; cash-flow reconstruction by differencing snapshots.
+I expected mislabelled vintage years to inflate beta. The vintage year is the
+year a fund started investing, and I control for it, because funds that started
+in 2006 all faced the same market. The two plans disagree about the vintage
+year for 18 of the 43 shared funds. CalPERS is always the later of the two,
+never earlier.
 
-Conventions and the override schema are documented in [CLAUDE.md](CLAUDE.md);
-design decisions and the reasoning behind them in
-[DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md).
+My argument was this. A fund assigned to the wrong year keeps some of its own
+year's market movement in the residual. A firm's consecutive funds sit in
+nearby years, so those leftovers are correlated across the pair. Correlated
+leftovers are exactly what beta picks up. Therefore mislabelling inflates beta,
+and 0.214 is an upper bound.
 
-## Known limitations
+I simulated it before writing it down. The simulation gave the opposite sign.
+Displacing the labels by the pattern I actually observe moves beta from 0.264
+to 0.226 at a true beta of 0.25, and from 0.511 to 0.441 at 0.50. The bias is
+about -14%, and it is 0 when the true beta is 0.
 
-Ordered by how much they should worry you. Direction of bias where known.
+The argument was wrong because it followed the residual and forgot the
+regressor. The same unabsorbed market movement lands in the previous fund's
+return as well, and noise in a regressor pulls a coefficient toward 0. That
+effect is the larger of the two. It is also the same mechanism this project
+already documented for leaving vintage controls out entirely, which I had not
+connected.
 
-- **Small n dominates.** 65 pairs across 39 families. The interval is wide
-  enough to contain both the Kaplan-Schoar-era estimates and zero. This is an
-  imprecise estimate, not a precise null.
-- **Active partnerships only.** CalPERS drops fully exited funds, so old
-  vintages that remain are survivors in a specific, non-random sense — a
-  pre-2010 fund appears only if it is still open twenty years on.
-- **Unrealised marks.** Most funds are 2020s vintages carrying GP valuations
-  rather than realisations. Interim NAVs are stale and smoothed, which
-  **attenuates β toward zero**. The cross-plan overlap bounds only the part
-  that differs between two LPs of the same fund (λ = 0.986, a 1.014×
-  correction); the stale-marks component is common to both reports and cancels
-  in the difference, so true attenuation is larger by an unknown amount. Note
-  the cross-plan *correlation* and the *reliability ratio* (λ = 0.986)
-  are different quantities — they coincide only under assumptions that the
-  shared GP valuation violates.
-- **The vintage label carries error.** 18 of 43 cross-plan matches disagree on
-  vintage year, always with CalPERS dating equal or later. Vintage fixed
-  effects are the main control in every specification.
-- **LP selection.** Only funds these plans chose to back are observed, so the
-  universe is conditioned on ex-ante institutional attractiveness. This cannot
-  be fixed with the available data and belongs in the limitations section, not
-  in a footnote.
-- **Funds younger than about five years** are mostly unrealised GP marks. They
-  are flagged, not dropped, and results are shown both ways.
-- **PME is infrastructure, not a finding.** Only funds that had drawn no
-  capital when the archive opens have a recoverable flow history — 63 of 490.
-  Their median KS PME is 0.957, but 59 of them carry ~99% of value as
-  unrealised marks, so that number describes carrying values against the
-  market, not realisations against it.
-- **No strategy dimension.** Neither plan publishes one, so buyout cannot be
-  separated from venture or credit. Classifying by fund-name keywords would be
-  a guess presented as data.
-- **Parallel vehicles break the AR(1) ordering.** Flagged by
-  `add_sequence_numbers` rather than silently ranked.
+So beta is a lower bound with respect to this error, not an upper bound. There
+are five tests pinning the direction so the write-up cannot drift back to my
+first instinct.
 
-## What would improve it most
+## Limitations
 
-More *families*, not more funds — precision is bounded by 39 clusters. CalSTRS
-and Washington State publish the same shape of data and are the obvious next
-adapters. Each additional year of Oregon archive also ages the PME sample
-toward the point where realised and marked funds can be compared with a real n.
+**The sample is small, and that dominates everything.** 65 pairs, 39 families.
+See the power calculation above.
 
-## References
+**Only funds that are still open appear in the CalPERS table.** Funds that have
+fully wound up are removed. So an old fund shows up only if it is still holding
+something twenty years on, which is not a random reason to still be around.
 
-- Kaplan, S. and Schoar, A. (2005). Private equity performance: returns,
-  persistence, and capital flows. *Journal of Finance* 60(4).
-- Harris, R., Jenkinson, T. and Kaplan, S. (2014). Private equity performance:
-  what do we know? *Journal of Finance* 69(5).
-- Korteweg, A. and Nagel, S. (2016). Risk-adjusting the returns to venture
-  capital. *Journal of Finance* 71(3).
-- Braun, R., Jenkinson, T. and Stoff, I. (2017). How persistent is private
-  equity performance? Evidence from deal-level data. *Journal of Financial
-  Economics* 123(2).
-- Cameron, A.C., Gelbach, J. and Miller, D. (2008). Bootstrap-based
-  improvements for inference with clustered errors. *Review of Economics and
-  Statistics* 90(3).
-- Gredil, O., Griffiths, B. and Stucke, R. (2014). Benchmarking private
-  equity: the direct alpha method.
-- Takahashi, D. and Alexander, S. (2002). Illiquid alternative asset fund
-  modeling. *Journal of Portfolio Management* 28(2).
+**Most funds are too young to have sold much.** Their reported returns are the
+manager's own valuation of companies it still owns, not cash returned. Those
+valuations are known to be smoothed and out of date, which pulls beta toward 0.
+The cross-plan comparison above measures only the part of that error where the
+two plans differ. Both plans get their numbers from the same manager, so the
+shared part of the error cancels and stays invisible. The real correction is
+larger than 1.014 by an unknown amount.
+
+**The vintage year itself is measured with error.** The two plans disagree for
+40% of shared funds. Vintage is the main control in every specification.
+
+**Only funds these two plans chose to buy are in the data.** Both are large,
+sophisticated investors. The sample is conditioned on a fund having looked
+attractive to them beforehand. Nothing in public data fixes this.
+
+**PME is mostly not computable here, by design.** PME compares a fund against
+what the money would have earned in the stock market. It needs dated cash
+flows. Both plans publish running totals instead. I recover flows by
+differencing consecutive snapshots, which only works for funds that had drawn
+nothing when my archive starts. That is 63 funds out of 490. Their median PME
+is 0.957, but 59 of the 63 still hold about 99% of their value as unsold
+companies. That number describes managers' valuations against the market, not
+realised returns, and I would not quote it as anything else.
+
+**Neither plan publishes what strategy a fund follows.** So I cannot separate
+buyouts from venture capital or credit. I considered guessing from fund names
+and did not, because "Ares Corporate Opportunities" and "GSO Energy Partners"
+are credit funds whose names do not say so.
+
+## Sources
+
+The data comes from two public disclosures:
+
+- CalPERS Private Equity Program Fund Performance.
+- Oregon PERS OPERF Private Equity Portfolio, quarterly.
+
+The benchmark for PME is the market factor from the Kenneth French data
+library. It is a total return, which includes dividends. A price index such as
+the headline S&P 500 leaves dividends out, worth about two percentage points a
+year, which compounds to roughly 22% of the benchmark over a ten-year fund
+life. Using one would make every PME look better than it is.
+
+The Oregon report carries a warning from the plan itself. It says its IRRs
+"SHOULD NOT be used to assess the investment success of a partnership or to
+compare returns across partnerships" and "HAVE NOT been approved by the
+individual general partners". That is the disclosing institution describing the
+measurement problem in its own words, and it is quoted in the code that parses
+the file.
+
+The files under `data/snapshots/` are public records. They are reproduced here
+so the analysis still runs after the plans remove them. They are not covered by
+this repository's MIT license.
+
+Papers this project leans on:
+
+- Kaplan, S. and Schoar, A. 2005. "Private Equity Performance: Returns,
+  Persistence, and Capital Flows." *Journal of Finance* 60 (4).
+- Harris, R., Jenkinson, T. and Kaplan, S. 2014. "Private Equity Performance:
+  What Do We Know?" *Journal of Finance* 69 (5).
+- Braun, R., Jenkinson, T. and Stoff, I. 2017. "How Persistent is Private
+  Equity Performance?" *Journal of Financial Economics* 123 (2).
+- Korteweg, A. and Nagel, S. 2016. "Risk-Adjusting the Returns to Venture
+  Capital." *Journal of Finance* 71 (3).
+- Cameron, A.C., Gelbach, J. and Miller, D. 2008. "Bootstrap-Based Improvements
+  for Inference with Clustered Errors." *Review of Economics and Statistics*
+  90 (3).
+- Gredil, O., Griffiths, B. and Stucke, R. 2014. "Benchmarking Private Equity:
+  The Direct Alpha Method."
+- Takahashi, D. and Alexander, S. 2002. "Illiquid Alternative Asset Fund
+  Modeling." *Journal of Portfolio Management* 28 (2).
