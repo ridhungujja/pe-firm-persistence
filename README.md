@@ -42,10 +42,10 @@ firm manages would credit a buyout team with a credit team's results.
 **The more interesting result is how I got here.** An earlier version of this
 study used one pension plan. It had 65 pairs from 39 families, estimated beta
 at 0.214, and could not rule out zero. It also worked out, at the time, that a
-study with 39 families could only detect a beta of 0.435 or larger, and had
-about a 19% chance of detecting the 0.214 it was estimating. So the null result
-was close to guaranteed before the data was ever looked at, and the write-up
-said so.
+study with 39 families could only detect a beta of about 0.43 or larger, and
+had about a 19% chance of detecting the 0.214 it was estimating. So the null
+result was close to guaranteed before the data was ever looked at, and the
+write-up said so.
 
 That was a prediction, and it was testable. I added a second pension plan.
 116 families instead of 39. The smallest detectable beta fell to 0.283. The
@@ -79,7 +79,7 @@ personally invested in. The two here are very different tables:
 | | funds | oldest fund | funds started before 2000 | typical fund started |
 |---|---|---|---|---|
 | CalPERS | 462 | 1998 | 1 | 2021 |
-| Oregon PERS | 447 | 1981 | 68 | 2011 |
+| Oregon PERS | 453 | 1981 | 68 | 2011 |
 
 CalPERS deletes a fund from its table once the fund finishes and pays out
 everything. So its old funds are only the ones still limping along twenty years
@@ -106,7 +106,7 @@ The data is already in this repository. You do not need to download anything.
 
 CalPERS publishes one HTML table covering 462 funds, and only for the current
 quarter. Oregon PERS publishes a PDF each quarter and leaves old quarters
-online. I have 18 of those, covering March 2021 to March 2026 and 447 funds in
+online. I have 18 of those, covering March 2021 to March 2026 and 453 funds in
 the most recent one. Both feed the estimate.
 
 I commit the Oregon files rather than downloading them at run time. Oregon
@@ -115,8 +115,8 @@ fetched again. Committing them also means the numbers here do not change under
 you.
 
 Getting those files was harder than it should have been. Oregon has used five
-different naming schemes for the same quarterly report, and files at least one
-report in the folder for the wrong year. Guessing URLs from the current scheme
+different naming schemes for the same quarterly report, and files two reports
+in the folder for the wrong year. Guessing URLs from the current scheme
 found 8 reports. Reading the links off the Treasury holdings page found 18. The
 fetcher reads the page.
 
@@ -281,10 +281,10 @@ around. Oregon does not do this, which is the main reason it is in the study.
 much reduced, not gone.
 
 **The two plans decide "too young to judge" differently.** Both mark funds
-whose returns are not yet meaningful, and I drop those. CalPERS marks 43% of
-its funds that way; Oregon marks 5%. So the filter is stricter on one half of
-the data than the other. Running with no filter at all gives 0.384, above the
-headline, so the filter is not creating the result.
+whose returns are not yet meaningful, and I drop those. On their published
+tables CalPERS marks 43% of its funds that way; Oregon marks 9%. So the filter
+is stricter on one half of the data than the other. Running with no filter at
+all gives 0.384, above the headline, so the filter is not creating the result.
 
 **Most funds are too young to have sold much.** Their reported returns are the
 manager's own valuation of companies it still owns, not cash returned. Those

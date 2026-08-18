@@ -8,7 +8,7 @@ wild cluster bootstrap p of 0.004, on 220 fund pairs drawn from 116 families.
 An earlier version of this study used one pension plan, had 65 pairs across 39
 families, estimated β = 0.214 and could not reject zero. It also computed, in
 advance, that a design with 39 families had a minimum detectable effect of
-0.435 and about 19% power at the coefficient it was estimating — so a null was
+0.43 and about 19% power at the coefficient it was estimating — so a null was
 the likely outcome whatever the truth. Adding a second plan raised the design
 to 116 families, dropped the minimum detectable effect to 0.283, and the same
 estimator on the same specification now rejects zero. The point estimate moved
@@ -39,7 +39,7 @@ CalPERS publishes its private equity programme as an HTML table, 462 rows as
 of the quarter ending 30 September 2025, covering **active partnerships only**.
 Oregon PERS publishes the same shape as quarterly PDFs and does not remove
 funds that have wound up; 18 quarters back to March 2021 are archived here, and
-the March 2026 file carries 447 funds going back to vintage 1981.
+the March 2026 file carries 453 funds going back to vintage 1981.
 
 The two plans are not interchangeable, and the difference is the reason for
 pooling rather than a nuisance:
@@ -47,7 +47,7 @@ pooling rather than a nuisance:
 | | funds | earliest vintage | vintages before 2000 | median vintage | flagged "not meaningful" |
 |---|---|---|---|---|---|
 | CalPERS | 462 | 1998 | 1 | 2021 | 43% |
-| Oregon | 447 | 1981 | 68 | 2011 | 5% |
+| Oregon | 453 | 1981 | 68 | 2011 | 9% |
 
 CalPERS alone is a table of mostly young funds carrying manager valuations
 rather than realisations. Oregon supplies the old, realised half of the sample
@@ -88,7 +88,7 @@ bootstrap p-value beside the analytic one.
 
 | specification | β | SE | 95% CI | p | p (boot) | n |
 |---|---|---|---|---|---|---|
-| 1. All funds, vintage FE | 0.421 | 0.068 | [0.288, 0.553] | 0.000 | 0.000 | 326 |
+| 1. All funds, vintage FE | 0.420 | 0.068 | [0.288, 0.553] | 0.000 | 0.000 | 326 |
 | 2. Mature only, vintage FE | 0.414 | 0.069 | [0.279, 0.549] | 0.000 | 0.000 | 266 |
 | **3. Mature, adjacent only — headline** | **0.344** | **0.090** | **[0.168, 0.521]** | 0.000 | **0.004** | **220** |
 | 4. + log commitment | 0.343 | 0.090 | [0.166, 0.520] | 0.000 | 0.003 | 220 |
@@ -103,7 +103,7 @@ bootstrap p-value beside the analytic one.
 decision problem: fund k has just been raised, fund k+1 is being marketed, and
 the question is whether the first tells you anything about the second.
 
-β still falls as the specification tightens, 0.421 → 0.414 → 0.344, exactly as
+β still falls as the specification tightens, 0.420 → 0.414 → 0.344, exactly as
 it did in the one-plan version. What changed is that it no longer falls
 through zero on the way. Row 6 is identical to row 3 by construction:
 deduplication keeps the earliest reported vintage, which already discarded
@@ -132,7 +132,7 @@ Each plan estimated on its own rows, with the same family definitions:
 | **pooled, both plans** | **0.344** | 0.090 | [0.168, 0.521] | 0.004 | 220 | 116 |
 | CalPERS alone | 0.214 | 0.138 | [−0.057, 0.485] | 0.187 | 65 | 39 |
 | Oregon alone | 0.358 | 0.112 | [0.139, 0.578] | 0.014 | 170 | 90 |
-| vintage before 2000 | 1.152 | 0.377 | [0.414, 1.889] | 0.056 | 16 | 13 |
+| vintage before 2000 | 1.151 | 0.377 | [0.414, 1.889] | 0.056 | 16 | 13 |
 | vintage 2000 or later | 0.308 | 0.087 | [0.137, 0.479] | 0.007 | 204 | 108 |
 | vintage 2010 or later | 0.385 | 0.079 | [0.230, 0.540] | 0.000 | 146 | 85 |
 | all funds, incl. immature | 0.384 | 0.095 | [0.199, 0.570] | 0.001 | 270 | 136 |
@@ -148,7 +148,7 @@ are consistent with one common β that both plans are measuring, and the pooled
 estimate is that common value. What separates the two rows is not the number
 but the interval: 39 families cannot exclude zero at β ≈ 0.3, and 90 can.
 
-**The pre-2000 row should not be quoted.** β = 1.152 on 16 pairs is above 1,
+**The pre-2000 row should not be quoted.** β = 1.151 on 16 pairs is above 1,
 which would mean performance amplifies across funds rather than decaying, and
 no one believes that. It is a small-sample artefact and it is printed here
 because leaving it out would be selective. The useful reading is that the
@@ -202,7 +202,7 @@ but the ordering is the same property it always was.
 
 **Family mapping is not driving the result.** Re-running the headline under
 three regimes — raw regex stems, high-confidence merges only, all merges —
-gives β of 0.368, 0.353 and 0.344. The spread of 0.024 is well inside one
+gives β of 0.368, 0.353 and 0.344. The spread of 0.023 is well inside one
 standard error, and it is *smaller* than the 0.055 spread in the one-plan
 version. The merges drive sample size: regex-only leaves 189 usable
 observations against 220.
@@ -284,7 +284,7 @@ tested, by wild cluster bootstrap at 5%.
 | 0.5 | 1.000 | 0.940 |
 | 0.6 | 1.000 | 0.997 |
 
-**The minimum detectable effect at 80% power is β ≈ 0.283, down from 0.435.**
+**The minimum detectable effect at 80% power is β ≈ 0.283, down from 0.43.**
 Rejection at β = 0 is 0.037, so the test is correctly sized and the curve is
 not flattered by over-rejection. Clustering on sponsor instead of family gives
 the same 0.283.
@@ -338,8 +338,10 @@ version, but it is not clean: Oregon's own coverage begins where its reporting
 begins.
 
 **The two plans do not flag maturity the same way.** "Not meaningful" is each
-plan's own judgement, and CalPERS applies it to 43% of its funds against
-Oregon's 5%. The maturity filter is therefore looser on the Oregon half. The
+plan's own judgement. On their own published tables CalPERS applies it to 43%
+of its funds against Oregon's 9%; inside the estimation panel, after the
+overlap funds are attributed to CalPERS, Oregon's share falls to 5%. Either way
+the maturity filter is looser on the Oregon half. The
 unfiltered row is reported above for exactly this reason: it gives 0.384, above
 the headline, so the filter is not manufacturing the result.
 

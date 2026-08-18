@@ -149,6 +149,10 @@ def main() -> None:
 
     # ------------------------------------------------ maturity comparability
     header("How differently do the two plans flag a fund 'not meaningful'?")
+    print("  (shares below are of the POOLED PANEL, not of each plan's published\n"
+          "  table. A fund both plans report is attributed to CalPERS by the\n"
+          "  pooling rule, so Oregon's share here is lower than the 9% on its\n"
+          "  own table.)")
     flag = panel.copy()
     flag["nm"] = flag["not_meaningful"].fillna(False).astype(bool)
     by = flag.groupby("source").agg(

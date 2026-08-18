@@ -347,7 +347,7 @@ reports stronger persistence pre-2000) would have meant the pooled coefficient
 was an average of two regimes and should not be quoted as one number.
 
 **The prediction that made this worth doing.** The CalPERS-only write-up had
-computed a minimum detectable effect of 0.435 and stated that a null was close
+computed a minimum detectable effect of about 0.43 and stated that a null was
 to guaranteed at 39 clusters regardless of the truth. That was a falsifiable
 claim about the design rather than about private equity. Raising the design to
 116 clusters dropped the MDE to 0.283 and the null did not survive. Keeping

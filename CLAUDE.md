@@ -29,7 +29,7 @@ families the CalPERS-only version had — see `wild_cluster_bootstrap`.
 
 The headline is **beta = 0.344, 95% CI [0.168, 0.521], bootstrap p 0.004**.
 An earlier CalPERS-only version got 0.214 and could not reject zero; it also
-computed that 39 families could not detect anything below 0.435. Pooling
+computed that 39 families could not detect anything below ~0.43. Pooling
 Oregon raised the design to 116 families and dropped that threshold to 0.283.
 The point estimate barely moved. **That decomposition is the finding — do not
 rewrite the history so it reads as if the answer was always 0.344.**
