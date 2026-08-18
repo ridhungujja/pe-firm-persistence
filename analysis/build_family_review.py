@@ -36,7 +36,10 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from pefund.ingest.base import (  # noqa: E402
+    apply_firm_overrides,
     load_firm_overrides,
+    normalise_firm_ids,
+    parse_fund_number,
     resolve_snapshot,
 )
 
@@ -125,6 +128,7 @@ def build(snapshot: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
     df = snapshot.copy()
     df["_raw"] = df[raw_col]
     df["_final"] = df["firm_id"]
+    df["_number"] = parse_fund_number(df["fund_name"])
 
     decided = dict(zip(overrides["firm_id_raw"], overrides["decision"]))
     reasons = dict(zip(overrides["firm_id_raw"], overrides["reason"]))
@@ -159,8 +163,22 @@ def build(snapshot: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
             flags.append("split:stem ends in a dangling separator")
         if orphan and neighbours[raw]:
             flags.append("split:sibling stem carries the same series name")
-        if sub.duplicated(subset=["vintage"], keep=False).any():
-            flags.append("sequence:two funds share a vintage")
+        # A vintage clash matters only within one plan. Across plans it is
+        # almost always the same partnership reported twice -- "CVC Capital
+        # Partners VI, L.P." in CalPERS and "CVC Capital Partners VI" in
+        # Oregon -- which `pool_plans` collapses on (family, fund number).
+        # Flagging those would send a reviewer to inspect 12 non-problems.
+        clash = sub.dropna(subset=["vintage"])
+        clash = clash[clash.duplicated(subset=["vintage"], keep=False)]
+        for _, tied in clash.groupby("vintage"):
+            same_fund = tied["_number"].nunique(dropna=False) == 1
+            one_plan = tied["source"].nunique() == 1
+            if one_plan or not same_fund:
+                flags.append("sequence:two funds share a vintage")
+                break
+        else:
+            if len(clash):
+                flags.append("duplicate:same fund reported by both plans")
 
         rows.append(
             {
@@ -186,9 +204,35 @@ def build(snapshot: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
     ).reset_index(drop=True)
 
 
+def load_universe() -> pd.DataFrame:
+    """Every fund either plan reports, stacked, before any family matching.
+
+    The sheet is built over the pooled universe rather than CalPERS alone
+    because the estimate is. A stem that only Oregon uses still decides which
+    funds land in the same family, so leaving it unreviewed would leave the
+    pooled sample resting on the unchecked half of the regex.
+
+    No cross-plan deduplication happens here. Duplicates are harmless for
+    this purpose -- the sheet groups by stem, and a fund seen twice just
+    appears twice in one stem's member list, which is if anything useful to
+    see. Deduplication needs `firm_id`, which is the output of the decisions
+    this sheet exists to collect.
+    """
+    frames = []
+    for prefix in ("calpers", "oregon"):
+        df = pd.read_csv(resolve_snapshot(DATA, prefix))
+        if "firm_id_raw" not in df.columns:
+            df["firm_id_raw"] = normalise_firm_ids(df)
+        if "firm_id" not in df.columns:
+            df["firm_id"] = df["firm_id_raw"]
+        frames.append(df[["fund_name", "vintage", "firm_id_raw", "firm_id", "source"]])
+    return pd.concat(frames, ignore_index=True)
+
+
 def main() -> None:
-    snapshot = pd.read_csv(resolve_snapshot(DATA, "calpers"))
+    snapshot = load_universe()
     overrides = load_firm_overrides()
+    snapshot["firm_id"] = apply_firm_overrides(snapshot["firm_id_raw"], overrides)
     review = build(snapshot, overrides)
     review.to_csv(OUT, index=False)
 

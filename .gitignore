@@ -37,6 +37,8 @@ data/spearman_within.csv
 data/simulation_validation.csv
 data/overlap_pairs.csv
 data/attenuation.csv
+data/sample_splits.csv
+data/sample_funnel.csv
 data/numeral_diagnostic.csv
 data/minimum_detectable_effect.csv
 data/vintage_error_simulation_beta*.csv

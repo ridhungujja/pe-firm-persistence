@@ -14,8 +14,9 @@ If it does not, a lot of money is being allocated on a pattern that is not
 there.
 
 I answer the question with data that US public pension plans are required by
-law to publish. The estimate is in `RESULTS.md`. The code is in this
-repository and runs end to end.
+law to publish. The short answer is yes, it does predict, by about a third.
+The estimate is in `RESULTS.md`. The code is in this repository and runs end to
+end.
 
 ## What I found
 
@@ -26,10 +27,11 @@ you nothing.
 
 ![Persistence estimate across specifications](figures/coefficients.png)
 
-Beta is 0.214. The 95% confidence interval runs from -0.057 to 0.485. The
-interval contains 0. On this data I cannot tell persistence apart from luck.
+Beta is 0.344. The 95% confidence interval runs from 0.168 to 0.521. It does
+not contain 0. A firm whose last fund beat its peers by 10% tends to beat them
+by about 3.4% with the next one.
 
-That estimate uses 65 pairs of funds drawn from 39 fund families.
+That estimate uses 220 pairs of funds drawn from 116 fund families.
 
 A fund family is one firm's numbered series. Blackstone Capital Partners V
 through IX is a family. Blackstone Tactical Opportunities is a different
@@ -37,31 +39,58 @@ family, run by a different team with a different mandate, even though the same
 firm owns both. I measure persistence inside a family. Pooling everything a
 firm manages would credit a buyout team with a credit team's results.
 
-Two things about this result are worth more than the number itself.
+**The more interesting result is how I got here.** An earlier version of this
+study used one pension plan. It had 65 pairs from 39 families, estimated beta
+at 0.214, and could not rule out zero. It also worked out, at the time, that a
+study with 39 families could only detect a beta of 0.435 or larger, and had
+about a 19% chance of detecting the 0.214 it was estimating. So the null result
+was close to guaranteed before the data was ever looked at, and the write-up
+said so.
 
-**The answer depends on how carefully you ask.** Run the same data loosely and
-beta is 0.390 with a p-value of 0.005, which looks conclusive. Loosely means
-two things. It means pooling funds that are not consecutive, so a 2007 fund
-gets treated as the predecessor of a 2021 fund. It means keeping funds that are
-too young to have sold anything, so their reported returns are the manager's
-own estimate of what the companies are worth. Restrict to consecutive funds
-that are old enough to have sold real assets and beta falls to 0.214. The
-significance disappears. Same data, opposite conclusion.
+That was a prediction, and it was testable. I added a second pension plan.
+116 families instead of 39. The smallest detectable beta fell to 0.283. The
+same code, on the same specification, now finds 0.344 and rejects zero. The
+point estimate moved by less than one standard error.
 
-**The study could not have found what the literature reports.** I computed the
-minimum detectable effect. That is the smallest true beta this sample would
-catch most of the time. I simulated data with a known beta, ran my own test on
-it, and counted how often the test found the effect. At a true beta of 0.43 the
-test finds it 80% of the time. Below that it usually misses.
+**So the first study's null was a statement about its sample size, exactly as
+it claimed to be.** That is worth more than either number on its own.
 
-Studies of funds raised before 2000 report betas around 0.4 to 0.6. Studies of
-funds raised after 2000 report well under 0.15. At a true beta of 0.1 my test
-finds the effect 7 times in 100. At 0.2 it finds it 19 times in 100. Those are
-measured, not interpolated.
+### Is that just a different set of funds?
 
-So a null result was close to guaranteed before I started. That is a fact about
-having 39 families, not a fact about private equity. It is a stronger and more
-specific statement than "the estimate was not significant".
+It could have been. The second plan holds older funds that have actually sold
+what they bought, and the research literature reports stronger persistence
+among older funds. If so, the pooled number would be an average of two
+different things and quoting it as one number would hide the real result.
+
+It isn't. Estimated separately, the first plan gives 0.214 and the second gives
+0.358. They differ by about one standard error, which is to say they agree.
+What separates them is the width of the error bars, not the answer. 39 families
+cannot exclude zero at a beta of 0.3. 90 families can.
+
+Running the new pipeline on only the old plan's data returns 0.2142 with 65
+pairs and 39 families, matching the earlier study to four decimal places. That
+is the check that nothing else changed underneath.
+
+### Why two plans and not one bigger one
+
+There is no bigger one. Each US public pension plan publishes only the funds it
+personally invested in. The two here are very different tables:
+
+| | funds | oldest fund | funds started before 2000 | typical fund started |
+|---|---|---|---|---|
+| CalPERS | 462 | 1998 | 1 | 2021 |
+| Oregon PERS | 447 | 1981 | 68 | 2011 |
+
+CalPERS deletes a fund from its table once the fund finishes and pays out
+everything. So its old funds are only the ones still limping along twenty years
+later, which is not a random reason to still exist. Oregon keeps everything.
+Almost every fund in this study old enough to have finished comes from Oregon.
+
+A fund both plans hold is counted once, not twice. I match those on the family
+name plus the fund's number in the series, and keep the CalPERS figures. That
+rule barely matters — where both plans report the same fund they agree to
+within 0.82% — but it is written down so the answer cannot depend on which
+file I happened to load first.
 
 ## What you need
 
@@ -74,11 +103,11 @@ pip install -r requirements.txt
 ```
 
 The data is already in this repository. You do not need to download anything.
-Two plans are included.
 
 CalPERS publishes one HTML table covering 462 funds, and only for the current
 quarter. Oregon PERS publishes a PDF each quarter and leaves old quarters
-online. I have 18 of those, covering March 2021 to March 2026 and 490 funds.
+online. I have 18 of those, covering March 2021 to March 2026 and 447 funds in
+the most recent one. Both feed the estimate.
 
 I commit the Oregon files rather than downloading them at run time. Oregon
 removes old quarters from its website. A file that disappears cannot be
@@ -98,7 +127,7 @@ python -m pytest -q
 ./run_all.sh --offline
 ```
 
-The test suite has 224 tests. On a fresh clone 8 of them skip, because they
+The test suite has 232 tests. On a fresh clone 8 of them skip, because they
 check tables that the pipeline has not written yet. Run the pipeline and they
 pass.
 
@@ -106,13 +135,14 @@ pass.
 re-download both plans. Do that only if you want fresher data, and expect the
 numbers to move, because Oregon's archive will have shifted.
 
-The whole run takes about ninety seconds. Most of that is two simulation
-studies: the power calculation and a check on vintage-year errors.
+The whole run takes a few minutes. Most of that is two simulation studies:
+the power calculation and a check on vintage-year errors.
 
 ## What you get
 
 Tables in `data/`, as CSV. The specification table, the mapping robustness
-table, the transition test, the power curve, and the cross-plan comparison.
+table, the sample splits, the transition test, the power curve, and the
+cross-plan comparison.
 
 Figures in `figures/`. Six of them, including the one above.
 
@@ -133,7 +163,7 @@ analysis/                   one script per output
 
 ## How much you can trust it
 
-I checked the estimate five ways. None of them changed the answer.
+I checked the estimate six ways. None of them overturned it.
 
 **The estimator recovers a known answer.** I simulate fund histories with a
 persistence I choose myself, then run the real estimation code on them. Across
@@ -142,56 +172,69 @@ covers the truth.
 
 **Standard errors use a wild cluster bootstrap.** Funds from the same firm are
 not independent observations. The usual fix is clustering, which widens the
-error bars to account for that. Clustering relies on having many groups. I have
-39. To check whether that is enough I generated data with no persistence at
-all and counted how often each method wrongly found some. At 20 groups the
-standard method reported a false positive 9 to 13 times in 100, against the 5
-it should. The bootstrap reported 4 to 6.
+error bars to account for that. Clustering relies on having many groups. I now
+have 116, which is comfortable, but I kept the bootstrap because it was needed
+at 39 and because group sizes here are lopsided. To check the concern was real
+I generated data with no persistence at all and counted how often each method
+wrongly found some. At 20 groups the standard method reported a false positive
+9 to 13 times in 100, against the 5 it should. The bootstrap reported 4 to 6.
 
 The bootstrap works by imposing the answer of zero on the data, then flipping
 the sign of each firm's residuals at random, thousands of times, to see how
 large a coefficient turns up by chance. Every p-value in the table is computed
-this way. Every one is larger than the standard method's. The standard method
-was manufacturing persistence, not hiding it.
+this way. Every one is larger than the standard method's — the standard method
+manufactures persistence rather than hiding it. At this sample size that no
+longer changes any conclusion: the headline is 0.0001 by the standard method
+and 0.0039 by the bootstrap, and both reject.
 
 **Fund-name matching does not drive the result.** The largest manual step in
 this project is deciding which funds belong to the same family. Names are
 inconsistent. "Advent International GPE V-D" and "Advent International GPE
 VI-A" are the same series, but a share-class letter on the end stops any simple
-rule from seeing it. I hand-checked and recorded 70 merge decisions, each with
-a reason. Running the estimate with no merges, with only the certain merges,
-and with all of them gives betas of 0.270, 0.245 and 0.214. The spread is
-smaller than one standard error.
+rule from seeing it. Worse, the two plans spell the same fund differently:
+Oregon writes "Mayfield XVII" where CalPERS writes "Mayfield XVII, a Delaware
+Limited Partnership", and one fund becomes two. I hand-checked and recorded 99
+merge decisions and 70 deliberate refusals to merge, each with a reason.
+Running the estimate with no merges, with only the certain merges, and with all
+of them gives betas of 0.368, 0.353 and 0.344. The spread is a quarter of one
+standard error.
 
 **No single firm or year carries it.** Dropping each family in turn and
-refitting gives betas between 0.138 and 0.281 across 39 refits. Dropping each
-year gives 0.118 to 0.308 across 17. None of them produces a negative beta.
+refitting gives betas between 0.309 and 0.438 across 116 refits. Dropping each
+year gives 0.319 to 0.432 across 29. None comes close to zero.
 
 **It is not an artefact of the functional form.** Ranking funds within their
-year and correlating the ranks gives 0.230, with a permutation p-value of
-0.239. Same sign, same rough size, same conclusion, and it does not assume the
+year and correlating the ranks gives 0.381, with a permutation p-value of
+0.0001. Same sign, same rough size, same conclusion, and it does not assume the
 relationship is a straight line.
+
+**The quartile table says the same thing without any model.** Sort funds into
+four buckets by how they did against funds started the same year, then ask
+where the next fund lands. A bottom-quartile fund is followed by another
+bottom-quartile fund 45% of the time, against 25% if it were random. A
+top-quartile fund is followed by another top-quartile fund 47% of the time. Over
+205 pairs the odds of that pattern arising by chance are 1 in 10,000.
 
 **Reporting error is small.** 43 funds appear in both plans on the same
 reporting date. That is two independent readings of the same fund. Seven of
 them are funds Oregon sold on the secondary market, where the reported figure
 is a sale price rather than a valuation, so I exclude them. On the remaining
 36, the median disagreement between the two plans is 0.82%. Correcting the
-estimate for that much noise moves beta from 0.214 to 0.217.
+estimate for that much noise moves beta by less than a hundredth.
 
 ### A reasoning error that the simulation caught
 
 I expected mislabelled vintage years to inflate beta. The vintage year is the
 year a fund started investing, and I control for it, because funds that started
 in 2006 all faced the same market. The two plans disagree about the vintage
-year for 18 of the 43 shared funds. CalPERS is always the later of the two,
+year for 14 of the 36 shared funds. CalPERS is always the later of the two,
 never earlier.
 
 My argument was this. A fund assigned to the wrong year keeps some of its own
 year's market movement in the residual. A firm's consecutive funds sit in
 nearby years, so those leftovers are correlated across the pair. Correlated
 leftovers are exactly what beta picks up. Therefore mislabelling inflates beta,
-and 0.214 is an upper bound.
+and the estimate is an upper bound.
 
 I simulated it before writing it down. The simulation gave the opposite sign.
 Displacing the labels by the pattern I actually observe moves beta from 0.264
@@ -211,27 +254,46 @@ first instinct.
 
 ## Limitations
 
-**The sample is small, and that dominates everything.** 65 pairs, 39 families.
-See the power calculation above.
+**The sample is still small in absolute terms.** 220 pairs, 116 families. Big
+enough to detect a beta of 0.283 four times in five, which is why the result
+exists. Not big enough to settle the low end: at a true beta of 0.1 this study
+would find it 13 times in 100. So nothing here rules out that persistence is
+small — it only rules out that it is zero.
 
-**Only funds that are still open appear in the CalPERS table.** Funds that have
-fully wound up are removed. So an old fund shows up only if it is still holding
-something twenty years on, which is not a random reason to still be around.
+**Funds that have wound up are missing from one plan.** CalPERS removes a fund
+once it finishes. So a CalPERS fund from 2005 shows up only if it is still
+holding something twenty years on, which is not a random reason to still be
+around. Oregon does not do this, which is the main reason it is in the study.
+68 of the 69 funds here started before 2000 come from Oregon. The problem is
+much reduced, not gone.
+
+**The two plans decide "too young to judge" differently.** Both mark funds
+whose returns are not yet meaningful, and I drop those. CalPERS marks 43% of
+its funds that way; Oregon marks 5%. So the filter is stricter on one half of
+the data than the other. Running with no filter at all gives 0.384, above the
+headline, so the filter is not creating the result.
 
 **Most funds are too young to have sold much.** Their reported returns are the
 manager's own valuation of companies it still owns, not cash returned. Those
-valuations are known to be smoothed and out of date, which pulls beta toward 0.
-The cross-plan comparison above measures only the part of that error where the
-two plans differ. Both plans get their numbers from the same manager, so the
-shared part of the error cancels and stays invisible. The real correction is
-larger than 1.014 by an unknown amount.
+valuations are smoothed and out of date. That cuts both ways here: smoothing is
+noise, which pulls beta toward 0, but a manager who values the new fund with
+one eye on the old one would push it up. The cross-plan comparison measures
+only the part of that error where the two plans differ. Both get their numbers
+from the same manager, so the shared part cancels and stays invisible.
 
 **The vintage year itself is measured with error.** The two plans disagree for
-40% of shared funds. Vintage is the main control in every specification.
+14 of 36 shared funds. Vintage is the main control in every specification. The
+simulation above says this pushes beta down, not up.
 
 **Only funds these two plans chose to buy are in the data.** Both are large,
 sophisticated investors. The sample is conditioned on a fund having looked
 attractive to them beforehand. Nothing in public data fixes this.
+
+**Neither plan publishes what strategy a fund follows.** So I cannot separate
+buyouts from venture capital or credit. I considered guessing from fund names
+and did not, because "Ares Corporate Opportunities" and "GSO Energy Partners"
+are credit funds whose names do not say so. The Washington State Investment
+Board does publish a strategy field, and is the obvious next source.
 
 **PME is mostly not computable here, by design.** PME compares a fund against
 what the money would have earned in the stock market. It needs dated cash
@@ -241,11 +303,6 @@ nothing when my archive starts. That is 63 funds out of 490. Their median PME
 is 0.957, but 59 of the 63 still hold about 99% of their value as unsold
 companies. That number describes managers' valuations against the market, not
 realised returns, and I would not quote it as anything else.
-
-**Neither plan publishes what strategy a fund follows.** So I cannot separate
-buyouts from venture capital or credit. I considered guessing from fund names
-and did not, because "Ares Corporate Opportunities" and "GSO Energy Partners"
-are credit funds whose names do not say so.
 
 ## Sources
 

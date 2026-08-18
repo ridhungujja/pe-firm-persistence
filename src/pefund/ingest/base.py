@@ -625,6 +625,94 @@ def resolve_snapshot(data_dir: str | Path, prefix: str) -> Path:
     )
 
 
+#: Order of preference when two plans report the same fund. CalPERS first is
+#: not a quality judgement -- the cross-plan work found the two disagree by
+#: 0.82% at the median, so the choice barely moves anything. It is fixed and
+#: written down so the pooled sample does not depend on concat order, and
+#: `pool_plans` records the alternative in `plan_alternates` so the whole
+#: table can be re-run under the opposite rule.
+PLAN_PRIORITY = ("CalPERS PEP", "Oregon PERS OPERF")
+
+
+def pool_plans(
+    frames: "list[pd.DataFrame]",
+    priority: "tuple[str, ...]" = PLAN_PRIORITY,
+) -> "tuple[pd.DataFrame, pd.DataFrame]":
+    """Stack several plans' snapshots into one fund universe.
+
+    Two public plans back many of the same funds, so stacking them naively
+    would enter Advent GPE IX twice and treat one fund's return as two
+    independent observations of the same family. Both copies also carry the
+    same manager-supplied valuation, so the duplicate adds no information
+    while shrinking every standard error -- the worst combination.
+
+    Funds are matched on ``(firm_id, fund_number)``, the same key the
+    cross-plan measurement-error work uses. Matching on fund name does not
+    work: the plans spell the same fund differently often enough that a name
+    key finds no overlap at all. A fund whose number could not be parsed
+    cannot be keyed, so it is carried through unmatched; that risks keeping a
+    duplicate, which is the direction that costs precision rather than the
+    direction that invents it.
+
+    Why pool at all. CalPERS removes a partnership once it winds up, so its
+    table is 462 funds with a median vintage of 2021 and exactly one fund
+    older than 2000. Oregon keeps its full history back to 1981. Pooling is
+    therefore not only more observations, it is the only route in this data
+    to funds old enough to have sold what they bought.
+
+    Returns the pooled frame and a table of the matched duplicates, so the
+    overlap stays inspectable rather than being silently discarded.
+    """
+    if not frames:
+        raise ValueError("pool_plans needs at least one frame")
+
+    stacked = pd.concat(frames, ignore_index=True)
+    for col in ("firm_id", "fund_number", "source"):
+        if col not in stacked.columns:
+            raise ValueError(
+                f"pool_plans needs a {col!r} column; run normalise_firm_ids, "
+                "apply_firm_overrides and parse_fund_number first"
+            )
+
+    rank = {name: i for i, name in enumerate(priority)}
+    unlisted = sorted(set(stacked["source"].dropna()) - set(rank))
+    if unlisted:
+        raise ValueError(
+            f"sources {unlisted} are not in PLAN_PRIORITY; add them so the "
+            "tie-break is explicit rather than dependent on row order"
+        )
+    stacked["_rank"] = stacked["source"].map(rank)
+
+    keyed = stacked["firm_id"].notna() & stacked["fund_number"].notna()
+    matched = stacked[keyed].sort_values(["firm_id", "fund_number", "_rank"])
+
+    # An overlap is a fund more than one PLAN reports. A fund one plan reports
+    # twice is a share class, not an overlap, and must not appear here.
+    n_sources = matched.groupby(["firm_id", "fund_number"])["source"].transform("nunique")
+    overlap = (
+        matched[n_sources > 1]
+        .groupby(["firm_id", "fund_number"])
+        .agg(
+            plans=("source", lambda s: " | ".join(sorted(set(s)))),
+            fund_names=("fund_name", lambda s: " | ".join(s.astype(str))),
+            kept=("source", "first"),
+            n_plans=("source", "nunique"),
+        )
+        .reset_index()
+    )
+
+    # Keep every row from the winning plan, not just the first row. Two rows
+    # from ONE plan sharing a family and fund number are share classes --
+    # "Bridgepoint Europe III 'C'" and "III 'D'" -- and belong to
+    # `deduplicate_share_classes`, which sums their cash. Dropping one here
+    # would silently delete half of that fund's capital. Only rows from a
+    # lower-priority plan are removed.
+    best = matched.groupby(["firm_id", "fund_number"])["_rank"].transform("min")
+    kept = matched[matched["_rank"] == best]
+    pooled = pd.concat([kept, stacked[~keyed]], ignore_index=True)
+    return pooled.drop(columns=["_rank"]), overlap
+
+
 def funds_observed_from_inception(panel: pd.DataFrame) -> pd.Index:
     """Funds whose entire cash flow history falls inside a snapshot archive.
 

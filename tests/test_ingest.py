@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pefund.ingest import base
 from pefund.ingest.base import (
     add_sequence_numbers,
     apply_firm_overrides,
@@ -459,3 +460,130 @@ class TestNumeralDiagnostic:
         # CVC, VIP, MIX all draw on IVXLC but are not valid roman numerals.
         assert stranded_number("ACME CVC FUND") == ""
         assert stranded_number("ACME VIP FUND") == ""
+
+
+# ---------------------------------------------------------------- pool_plans
+
+
+def _plan_row(source, firm, number, name, vintage=2010, tvpi_num=2.0):
+    return {
+        "fund_id": f"{source}::{name}",
+        "fund_name": name,
+        "vintage": vintage,
+        "commitment": 100.0,
+        "contributions": 100.0,
+        "distributions": 100.0 * tvpi_num,
+        "total_value": 100.0 * tvpi_num,
+        "nav": 0.0,
+        "net_irr": 0.1,
+        "not_meaningful": False,
+        "source": source,
+        "firm_id": firm,
+        "fund_number": number,
+    }
+
+
+CAL = "CalPERS PEP"
+ORE = "Oregon PERS OPERF"
+
+
+def test_pool_plans_collapses_a_fund_held_by_both_plans():
+    """The same partnership in two plans is one fund, not two observations."""
+    cal = pd.DataFrame([_plan_row(CAL, "ADVENT INTERNATIONAL GPE", 9.0, "Advent GPE IX, L.P.")])
+    ore = pd.DataFrame([_plan_row(ORE, "ADVENT INTERNATIONAL GPE", 9.0, "Advent Intl GPE IX")])
+
+    pooled, overlap = base.pool_plans([cal, ore])
+
+    assert len(pooled) == 1
+    assert len(overlap) == 1
+    assert overlap.loc[0, "n_plans"] == 2
+
+
+def test_pool_plans_tie_break_is_priority_not_argument_order():
+    """Swapping the frames must not swap which plan's numbers survive."""
+    cal = pd.DataFrame([_plan_row(CAL, "APOLLO INVESTMENT FUND", 8.0, "Apollo VIII", tvpi_num=2.0)])
+    ore = pd.DataFrame([_plan_row(ORE, "APOLLO INVESTMENT FUND", 8.0, "Apollo VIII", tvpi_num=3.0)])
+
+    first, _ = base.pool_plans([cal, ore])
+    second, _ = base.pool_plans([ore, cal])
+
+    assert first["source"].tolist() == [CAL]
+    assert second["source"].tolist() == [CAL]
+    assert first["total_value"].iloc[0] == second["total_value"].iloc[0]
+
+
+def test_pool_plans_keeps_distinct_funds_of_the_same_family():
+    """Pooling must not collapse fund VIII and fund IX into one row."""
+    cal = pd.DataFrame([_plan_row(CAL, "KKR AMERICAS FUND", 12.0, "KKR Americas XII")])
+    ore = pd.DataFrame([_plan_row(ORE, "KKR AMERICAS FUND", 13.0, "KKR Americas XIII")])
+
+    pooled, overlap = base.pool_plans([cal, ore])
+
+    assert len(pooled) == 2
+    assert overlap.empty
+
+
+def test_pool_plans_carries_unnumbered_funds_through_unmatched():
+    """A fund with no parsed number cannot be keyed, so it is kept, not dropped.
+
+    Keeping it risks a duplicate, which costs precision. Dropping it would
+    delete a real fund. The first error is the safer one.
+    """
+    cal = pd.DataFrame([_plan_row(CAL, "GOLDEN BAY", float("nan"), "2024 Golden Bay, L.P.")])
+    ore = pd.DataFrame([_plan_row(ORE, "GOLDEN BAY", float("nan"), "Golden Bay Fund")])
+
+    pooled, _ = base.pool_plans([cal, ore])
+
+    assert len(pooled) == 2
+
+
+def test_pool_plans_rejects_an_unlisted_source():
+    """An unknown plan has no place in the priority order, so the tie-break
+    would fall back to row order. Refuse rather than resolve it silently."""
+    cal = pd.DataFrame([_plan_row(CAL, "BLACKSTONE CAPITAL PARTNERS", 7.0, "BCP VII")])
+    other = pd.DataFrame([_plan_row("CalSTRS", "BLACKSTONE CAPITAL PARTNERS", 7.0, "BCP VII")])
+
+    with pytest.raises(ValueError, match="PLAN_PRIORITY"):
+        base.pool_plans([cal, other])
+
+
+def test_pool_plans_requires_the_key_columns():
+    """Pooling before family matching would key on nothing."""
+    raw = pd.DataFrame([{"fund_name": "Apollo VIII", "source": CAL}])
+
+    with pytest.raises(ValueError, match="firm_id"):
+        base.pool_plans([raw])
+
+
+def test_pool_plans_keeps_share_classes_within_one_plan():
+    """Two rows from ONE plan sharing a family and number are share classes.
+
+    They belong to `deduplicate_share_classes`, which sums their cash.
+    Collapsing them here would delete half the fund's capital and silently
+    halve its TVPI denominator.
+    """
+    cal = pd.DataFrame([
+        _plan_row(CAL, "BRIDGEPOINT EUROPE", 3.0, "Bridgepoint Europe III 'C'"),
+        _plan_row(CAL, "BRIDGEPOINT EUROPE", 3.0, "Bridgepoint Europe III 'D'"),
+    ])
+
+    pooled, overlap = base.pool_plans([cal])
+
+    assert len(pooled) == 2
+    assert overlap.empty, "one plan reporting two share classes is not an overlap"
+
+
+def test_pool_plans_drops_the_lower_priority_plan_not_the_extra_share_class():
+    """A fund with share classes in one plan and a single row in the other
+    keeps both share classes and drops the single row."""
+    cal = pd.DataFrame([
+        _plan_row(CAL, "ADVENT INTERNATIONAL GPE", 6.0, "Advent GPE VI-A"),
+        _plan_row(CAL, "ADVENT INTERNATIONAL GPE", 6.0, "Advent GPE VI-B"),
+    ])
+    ore = pd.DataFrame([_plan_row(ORE, "ADVENT INTERNATIONAL GPE", 6.0, "Advent GPE VI")])
+
+    pooled, overlap = base.pool_plans([cal, ore])
+
+    assert pooled["source"].tolist() == [CAL, CAL]
+    assert len(overlap) == 1
+    assert overlap.loc[0, "n_plans"] == 2

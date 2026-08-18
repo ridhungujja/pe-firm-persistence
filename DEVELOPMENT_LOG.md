@@ -326,3 +326,95 @@ reaches the resampler.
 4. **Precision is bounded by 39 clusters**, not by 459 observations. More
    *families* is the only thing that moves it — CalSTRS and Washington State
    publish the same shape of data, and each new plan also adds overlap pairs.
+
+## Pooling Oregon into the estimation sample
+
+Oregon's tables had been in the repository for weeks, used only for the
+cross-plan measurement-error check and for PME. The headline estimate ran on
+CalPERS alone. That was the largest available improvement to the study sitting
+unused, and it cost no new scraping.
+
+**What it changed.** 65 pairs across 39 families became 220 across 116. Beta
+went from 0.214 with a confidence interval containing zero to 0.344 with one
+that does not.
+
+**Why that is not a different result.** The two plans estimated separately give
+0.214 and 0.358 — about one standard error apart, which is agreement. The
+pooled estimate is the common value both were measuring. What changed is the
+error bar. This was checked before writing anything up, because the alternative
+explanation (Oregon holds older, mostly-realised funds, and the literature
+reports stronger persistence pre-2000) would have meant the pooled coefficient
+was an average of two regimes and should not be quoted as one number.
+
+**The prediction that made this worth doing.** The CalPERS-only write-up had
+computed a minimum detectable effect of 0.435 and stated that a null was close
+to guaranteed at 39 clusters regardless of the truth. That was a falsifiable
+claim about the design rather than about private equity. Raising the design to
+116 clusters dropped the MDE to 0.283 and the null did not survive. Keeping
+that ordering visible in the write-up matters more than the coefficient.
+
+### Two errors caught in the process
+
+**`pool_plans` initially deleted share classes.** The first version collapsed
+duplicates on `(firm_id, fund_number)` without regard to which plan a row came
+from. Within one plan, two rows sharing a family and a fund number are share
+classes — "Bridgepoint Europe III 'C'" and "III 'D'" — and belong to
+`deduplicate_share_classes`, which *sums* their capital. Dropping one instead
+deletes half the fund's cash. It surfaced because CalPERS-alone stopped
+reproducing its own published 0.2142. The fix keeps every row from the winning
+plan and drops only rows from a lower-priority plan; two tests pin it.
+
+**The by-plan split was measuring the wrong thing.** The first version filtered
+the pooled panel on `source`. That is not a plan-level split: the lag in the
+pooled panel comes from the pooled family sequence, so a CalPERS fund's
+predecessor can be a fund only Oregon reports, and selecting on the successor's
+source quietly keeps the sample-size gain the split was meant to isolate. It
+gave CalPERS 0.333 on 83 pairs. Rebuilt from each plan's own rows it gives
+0.214 on 65 — the published number, to four decimals. The wrong version made
+the two plans look more alike, which is the direction that flattered the
+argument being made, so it would not have been caught by finding the answer
+implausible.
+
+### Figures were publishing stale literals
+
+Two figures asserted numbers rather than reading them. `coefficients.png`
+carried the subtitle "the interval includes zero", which stayed on the chart
+after the interval stopped including zero. `sample_funnel.png` had all seven
+funnel counts hardcoded at their one-plan values. Both now read the measured
+tables. The funnel also changes units midway — funds up to "families with 2+",
+pairs after — so differencing across that step printed a meaningless negative
+loss; it is suppressed.
+
+### Family matching, second pass
+
+The first pass reviewed only stems CalPERS produces, leaving roughly half the
+pooled universe unchecked. 59 real split candidates were reviewed and 62 rows
+added, taking the file to 99 merges and 70 recorded refusals.
+
+Two considerations were new. First, merging is now load-bearing rather than
+cosmetic: if the two plans' spellings of one fund land on different stems, the
+`(firm_id, fund_number)` key never matches and the fund enters the panel twice.
+"Mayfield XVII" and "Mayfield XVII, a Delaware Limited Partnership" is the
+clean example. One first-pass `keep_separate` was reversed for exactly this
+reason, with the original row left in place as a comment explaining the
+supersession.
+
+Second, vintage now settles cases the name cannot. "Pathway Private Equity Fund
+III-B" reads as a share class of fund III and would have been merged on the
+name alone; it carries a 2008 vintage against fund III's 2001, so it is a
+separate vehicle and stays out. A share class shares its fund's vintage.
+
+Whole series that the regex had scattered were the largest gain: HarbourVest
+Partners IV/V/VI (1993-1999, all pre-2000 and realised), Genstar's Opportunities
+series VIII through XI, and GGV's four "Plus" funds.
+
+### Still open
+
+- No third plan. WSIB publishes 448 funds back to 1981 **and a strategy field**,
+  which is the only public source found that would let buyout be separated from
+  venture and credit. CalSTRS was investigated and is a weaker add: 475 funds
+  but a median vintage of 2017 and two funds before 2000.
+- The pre-2000 era split has 16 pairs and returns beta above 1, which is
+  nonsense. Reported so the omission is not selective, not interpreted.
+- The two plans' "not meaningful" flags are not a common rule (43% against 5%),
+  so the maturity filter is asymmetric across the pooled sample.

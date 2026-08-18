@@ -120,7 +120,10 @@ LIGHTSPEED OPPORTUNITY FUND,LIGHTSPEED OPPORTUNITY FUND,keep_separate,high,"Oppo
 HG GENESIS 10 A,HG GENESIS 10 A,keep_separate,high,"Hg runs Genesis, Mercury and Saturn as separate size-banded strategies. Merging on the Hg prefix would pool three different teams."
 HG MERCURY 4 A,HG MERCURY 4 A,keep_separate,high,Distinct Hg strategy.
 HG SATURN 3 A,HG SATURN 3 A,keep_separate,high,Distinct Hg strategy.
-MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP,MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP,keep_separate,high,Select is a separate line from the numbered Mayfield funds.
+# MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP was keep_separate here in the
+# first pass. Superseded below: the intent -- Select is not the numbered Mayfield
+# series -- is kept, but it now merges into MAYFIELD SELECT instead of standing
+# alone, because Oregon reports the same fund as "Mayfield Select III".
 BALDERTON CAPITAL GROWTH II SLP,BALDERTON CAPITAL GROWTH II SLP,keep_separate,high,"Growth line, distinct from the numbered Balderton venture funds."
 GENSTAR CAPITAL PARTNERS,GENSTAR CAPITAL PARTNERS,keep_separate,high,Flagship series X-XI. Kept apart from the Genstar Opportunities overage vehicles.
 #
@@ -137,3 +140,88 @@ BRIDGEPOINT EUROPE III 'D',BRIDGEPOINT EUROPE,merge,high,Share class 'D' of Brid
 BRIDGEPOINT EUROPE IV 'B',BRIDGEPOINT EUROPE,merge,high,"Share class 'B' of Bridgepoint Europe IV. Collapses with the 'D' class; its 2015 stamp loses to the 2008 fund vintage."
 BRIDGEPOINT EUROPE IV 'D',BRIDGEPOINT EUROPE,merge,high,Share class 'D' of Bridgepoint Europe IV (2008).
 BRIDGEPOINT EUROPE VII D,BRIDGEPOINT EUROPE,merge,high,Bridgepoint Europe VII (2024). Single class in this snapshot.
+#
+# ---------------------------------------------------------------------------
+# Second pass, after Oregon PERS was pooled into the estimation sample. The
+# first pass reviewed only stems CalPERS produces; roughly half the pooled
+# universe had never been looked at. Two new considerations apply here that
+# did not apply to a single plan:
+#
+#   1. A fund held by both plans is collapsed on (firm_id, fund_number). If
+#      the two plans' spellings land on different stems, that key never
+#      matches and the fund is counted twice. Merging the stems is therefore
+#      load-bearing for the sample size, not cosmetic.
+#   2. Vintage now settles cases the name cannot. "Pathway Private Equity
+#      Fund III-B" reads as a share class of fund III, but it is stamped 2008
+#      against fund III's 2001, so it is a separate vehicle and stays out.
+# ---------------------------------------------------------------------------
+#
+# Share classes, feeders and domicile suffixes -- Oregon spellings of series
+# the first pass already merged under the CalPERS spelling.
+ADVENT INTERNATIONAL GPE VI A,ADVENT INTERNATIONAL GPE,merge,high,"Share class A of GPE VI. Oregon writes the class with a space where CalPERS uses a hyphen, so the two spellings split one fund across two stems."
+ADVENT INTERNATIONAL GPE VII,ADVENT INTERNATIONAL GPE,merge,high,"Stem of ""Advent International GPE VII C"". Share class C of GPE VII."
+ADVENT INTERNATIONAL GPE XI SCSP,ADVENT INTERNATIONAL GPE,merge,high,SCSp is a Luxembourg partnership suffix sitting after the fund number. GPE XI is the current flagship.
+ADVENT LATIN AMERICAN PRIVATE EQUITY FUND VI,ADVENT LATIN AMERICAN PRIVATE EQUITY FUND,merge,high,"Stem of ""Advent Latin American Private Equity Fund VI C"". Share class C; joins VII and VIII."
+BE VI 'H',BRIDGEPOINT EUROPE,merge,high,"Bridgepoint's own abbreviation for Bridgepoint Europe VI, share class H. No prefix rule can find this one -- the firm name is initialised."
+GGV DISCOVERY IV ASIA,GGV DISCOVERY,merge,high,Asia sleeve of GGV Discovery IV. Two geographic vehicles of one fund; deduplication sums them back into fund IV.
+GGV DISCOVERY IV US,GGV DISCOVERY,merge,high,US sleeve of GGV Discovery IV. See the Asia row.
+GTCR FUND XII-AB,GTCR FUND,merge,high,-AB is GTCR's share-class tag. Joins XIII-AB and XIV.
+GTCR FUND XIII-AB,GTCR FUND,merge,high,-AB is GTCR's share-class tag. Joins XII-AB and XIV.
+KKR NORTH AMERICA FUND XIII SCSP,KKR NORTH AMERICA FUND,merge,high,Luxembourg suffix after the fund number. Joins XI and XIV.
+MAYFIELD XVII A DELAWARE LIMITED PARTNERSHIP,MAYFIELD,merge,high,"CalPERS spelling of Mayfield XVII, which Oregon reports plainly. Without this merge the same 2024 fund enters the panel twice."
+MAYFIELD SELECT III A DELAWARE LIMITED PARTNERSHIP,MAYFIELD SELECT,merge,high,"Reverses a keep_separate from the first pass. It was a harmless singleton when only CalPERS was loaded; pooled, it is CalPERS' spelling of Oregon's ""Mayfield Select III"" and leaving it out double-counts the fund."
+THE BARING ASIA PRIVATE EQUITY FUND VI LP,THE BARING ASIA PRIVATE EQUITY FUND,merge,high,"Stem of ""The Baring Asia Private Equity Fund VI, L.P. 1"". The trailing 1 is a feeder tag, not a fund number."
+VISTA EQUITY PARTNERS FUND VII-Z,VISTA EQUITY PARTNERS FUND,merge,high,Share class Z of Vista Equity Partners Fund VII. Joins III through VIII.
+CENTERBRIDGE SPECIAL CREDIT PARTNERS III - FLEX,CENTERBRIDGE SPECIAL CREDIT PARTNERS,merge,medium,"Parallel vehicle of CSCP III with the same 2014 vintage, so it is the same fund on different terms rather than a later one. Medium: Centerbridge markets Flex as its own vehicle."
+TCW SPECIAL CREDITS FUND V - THE PRINCIPAL,TCW SPECIAL CREDITS FUND,merge,high,"""The Principal Fund"" is the named vehicle for TCW Special Credits Fund V. Joins III and IV, extending the series to three."
+#
+# Whole series the regex scattered because every fund's suffix differs.
+HARBOURVEST PARTNERS IV - INVESTMENT PROGRAM,HARBOURVEST PARTNERS,merge,high,"HarbourVest's numbered flagship, 1993. The ""- Investment Program"" tail differs fund to fund and put each vintage on its own stem."
+HARBOURVEST PARTNERS V - INVESTMENT PROGRAM,HARBOURVEST PARTNERS,merge,high,"HarbourVest Partners V, 1997. Same series as IV and VI."
+HARBOURVEST PARTNERS VI - PARTNERSHIP,HARBOURVEST PARTNERS,merge,high,"HarbourVest Partners VI, 1999. The tail reads ""Partnership Fund"" rather than ""Investment Program"" but the series is the same."
+HARBOURVEST INTERNATIONAL PEP III - PARTNERSHIP,HARBOURVEST INTERNATIONAL PEP,merge,high,International PEP III. Joins PEP and PEP II to make a three-fund series.
+GENSTAR VIII OPPORTUNITIES,GENSTAR OPPORTUNITIES FUND,merge,high,"Genstar's Opportunities funds are a numbered series in their own right, running alongside the Capital Partners flagship. VIII (2017) is its first observed step."
+GENSTAR IX OPPORTUNITIES FUND,GENSTAR OPPORTUNITIES FUND,merge,high,"Genstar IX Opportunities Fund I (2019). Joins VIII, X and XI."
+GENSTAR XI OPPORTUNITIES,GENSTAR OPPORTUNITIES FUND,merge,high,"Oregon's spelling of Genstar XI Opportunities Fund, which CalPERS files under GENSTAR XI OPPORTUNITIES FUND. Both must reach the same family or the 2023 fund is counted twice."
+GGV CAPITAL VI PLUS,GGV CAPITAL PLUS,merge,high,"GGV's ""Plus"" funds are a separate numbered series that invests in later rounds of the flagship's companies. They are not steps in the flagship sequence, but they are a sequence."
+GGV CAPITAL VII PLUS,GGV CAPITAL PLUS,merge,high,GGV Capital VII Plus (2019). Second observed step of the Plus series.
+GGV CAPITAL VIII PLUS,GGV CAPITAL PLUS,merge,high,GGV Capital VIII Plus (2021).
+GGV CAPITAL IX PLUS,GGV CAPITAL PLUS,merge,high,GGV Capital IX Plus (2024).
+APAX VIII USD,APAX,merge,high,USD feeder of Apax VIII. Joins Apax IX.
+APAX EUROPE,APAX,merge,medium,"Apax dropped ""Europe"" from the flagship's name when the fund went global; Europe VII (2007) is the predecessor of VIII (2012). Medium because the rename is a judgement about continuity of team and mandate, not something the disclosure states."
+#
+# Inspected and deliberately left out of a flagship family.
+BRIDGEPOINT EUROPE VI (SIDECAR),BRIDGEPOINT EUROPE VI (SIDECAR),keep_separate,high,"A sidecar is co-investment capital raised alongside fund VI, not the next fund in the series."
+KKR E2 INVESTORS (EURO 2 ANNEX FUND),KKR E2 INVESTORS (EURO 2 ANNEX FUND),keep_separate,high,"An annex fund is follow-on capital for an existing fund's portfolio. Merging it into KKR would also pool it with every other KKR strategy, since KKR is a catch-all stem."
+PATHWAY PRIVATE EQUITY FUND III-B,PATHWAY PRIVATE EQUITY FUND III-B,keep_separate,high,"Reads as share class B of fund III but carries a 2008 vintage against fund III's 2001. A share class shares its fund's vintage; this is a separate vehicle."
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES,PATHWAY PRIVATE EQUITY FUND III-CO SERIES,keep_separate,high,"Co-investment series C, 2020. The seven III-Co series span 2019-2024 while all carrying the number III, so pooling them would sum six years of different funds into one observation."
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES A,PATHWAY PRIVATE EQUITY FUND III-CO SERIES A,keep_separate,high,Co-investment series A. See the III-Co Series row.
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES B,PATHWAY PRIVATE EQUITY FUND III-CO SERIES B,keep_separate,high,Co-investment series B. See the III-Co Series row.
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES D,PATHWAY PRIVATE EQUITY FUND III-CO SERIES D,keep_separate,high,Co-investment series D. See the III-Co Series row.
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES E,PATHWAY PRIVATE EQUITY FUND III-CO SERIES E,keep_separate,high,Co-investment series E. See the III-Co Series row.
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES F,PATHWAY PRIVATE EQUITY FUND III-CO SERIES F,keep_separate,high,Co-investment series F. See the III-Co Series row.
+PATHWAY PRIVATE EQUITY FUND III-CO SERIES G,PATHWAY PRIVATE EQUITY FUND III-CO SERIES G,keep_separate,high,Co-investment series G. See the III-Co Series row.
+OAKTREE OPPORTUNITIES FUND VIIIB,OAKTREE OPPORTUNITIES FUND VIIIB,keep_separate,high,"Oaktree's ""b"" funds are separate vehicles raised alongside the numbered fund, not the fund itself. Both plans report this one, and because ""VIIIb"" parses to no fund number the duplicate cannot be keyed away; it is a one-fund family either way, so it contributes no pairs."
+OAKTREE OPPORTUNITIES FUND XB,OAKTREE OPPORTUNITIES FUND XB,keep_separate,high,"See the VIIIb row. Xb (2018) sits alongside Oaktree Opportunities Fund X (2015)."
+AEP IV OPERF CO-INVESTMENTS,AEP IV OPERF CO-INVESTMENTS,keep_separate,high,A co-investment vehicle Oregon holds beside a fund it also holds directly. Named for the plan itself.
+TCP II CO-INVEST B,TCP II CO-INVEST B,keep_separate,high,Co-investment sleeve.
+WIGMORE STREET CO-INVESTMENT NO,WIGMORE STREET CO-INVESTMENT NO,keep_separate,high,"Co-investment vehicle. The stem ends dangling because the fund number sits in ""No. 1""."
+WIGMORE STREET VI CO-INVESTMENT NO,WIGMORE STREET VI CO-INVESTMENT NO,keep_separate,high,Co-investment vehicle alongside a sixth fund. See the row above.
+BARING VOSTOK PRIVATE EQUITY FUND IV LP / SUPPLEMENTAL,BARING VOSTOK PRIVATE EQUITY FUND IV LP / SUPPLEMENTAL,keep_separate,high,A supplemental vehicle for fund IV. No other Baring Vostok fund appears in either plan.
+GENERATION IM SUSTAINABLE PRIVATE EQUITY FUND II (A) ILP,GENERATION IM SUSTAINABLE PRIVATE EQUITY FUND II (A) ILP,keep_separate,high,Share class A of fund II. Neither plan holds another fund in the series so there is nothing to merge it with.
+BAIN CAPITAL EUROPE FUND VI SCSP,BAIN CAPITAL EUROPE FUND VI SCSP,keep_separate,high,"Sole Bain Capital Europe fund in either plan. Bain's other stems here are separate strategies -- Asia, Insurance, Life Sciences, Tech Opportunities, Venture -- and none is its predecessor."
+ASF VIII B,ASF VIII B,keep_separate,high,Ardian Secondary Fund VIII share class B. No other ASF fund in either plan.
+BALDERTON CAPITAL IX SLP,BALDERTON CAPITAL IX SLP,keep_separate,high,Sole Balderton fund. S.L.P. is a French partnership suffix after the number.
+BESSEMER VENTURE PARTNERS XII INSTITUTIONAL,BESSEMER VENTURE PARTNERS XII INSTITUTIONAL,keep_separate,high,Institutional class of BVP XII. Sole Bessemer fund in either plan.
+BIOGENERATION CAPITAL FUND V COOPERATIEF UA,BIOGENERATION CAPITAL FUND V COOPERATIEF UA,keep_separate,high,Dutch cooperative suffix after the number. Sole BioGeneration fund.
+CAPVEST EQUITY PARTNERS V SCSP,CAPVEST EQUITY PARTNERS V SCSP,keep_separate,high,Luxembourg suffix after the number. Sole CapVest fund.
+EMBER INFRASTRUCTURE FUND II-B,EMBER INFRASTRUCTURE FUND II-B,keep_separate,high,Share class B of Ember II. Sole Ember fund.
+FORCAL I INVESTMENT FUND,FORCAL I INVESTMENT FUND,keep_separate,high,Sole ForCal fund. The number sits mid-name so the numeral strip never reaches it.
+GA CONTINUITY II (GT) FUND,GA CONTINUITY II (GT) FUND,keep_separate,high,"A continuation vehicle, which buys assets out of an existing fund rather than raising a successor."
+GRAIN COMMUNICATIONS OPPORTUNITY FUND IV-A,GRAIN COMMUNICATIONS OPPORTUNITY FUND IV-A,keep_separate,high,Share class A of Grain IV. Sole Grain fund.
+OAKTREE EUROPEAN PRINCIPAL FUND III (US),OAKTREE EUROPEAN PRINCIPAL FUND III (US),keep_separate,high,US feeder of Oaktree European Principal Fund III. Sole fund in that series here.
+OREGON INVESTMENT FUND (SERIES 1-A),OREGON INVESTMENT FUND (SERIES 1-A),keep_separate,high,An in-state programme vehicle rather than a commingled fund with a successor.
+OTRO CAPITAL FUND I-A,OTRO CAPITAL FUND I-A,keep_separate,high,Share class A of a first fund. There is no predecessor by definition.
+PANTHEON GLOBAL SECONDARY FUND VII FEEDER (US),PANTHEON GLOBAL SECONDARY FUND VII FEEDER (US),keep_separate,high,US feeder of Pantheon Global Secondary VII. Sole fund in that series here.
+SR ONE CAPITAL FUND II-A,SR ONE CAPITAL FUND II-A,keep_separate,high,Share class A of SR One II. Sole SR One fund.
+VERDANE EDDA III (D1) AB,VERDANE EDDA III (D1) AB,keep_separate,high,Share class D1 of Verdane Edda III. Sole Verdane fund.

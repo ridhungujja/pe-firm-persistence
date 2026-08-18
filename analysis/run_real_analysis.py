@@ -55,6 +55,8 @@ from pefund.ingest.base import (  # noqa: E402
     load_firm_overrides,
     normalise_firm_ids,
     parse_fund_number,
+    pool_plans,
+    resolve_snapshot,
 )
 from pefund.persistence import (  # noqa: E402
     build_panel,
@@ -81,21 +83,35 @@ warnings.filterwarnings("ignore", message="invalid value encountered in sqrt")
 
 
 def raw_table() -> pd.DataFrame:
-    """The un-normalised CalPERS table.
+    """Both plans' tables stacked, before any family matching.
 
-    Prefers the working copy, falls back to the newest dated capture in the
-    snapshot archive. A fresh clone has only the archived one, and offline
-    reproduction has to work from that.
+    CalPERS prefers the working copy and falls back to the newest dated
+    capture in the snapshot archive; a fresh clone has only the archived one,
+    and offline reproduction has to work from that. Oregon comes from the
+    archive by construction, since Oregon rotates old quarters off its site.
+
+    No deduplication happens here. Which rows are the same fund depends on
+    `firm_id`, which depends on which override regime is being run, so
+    pooling belongs inside `build_regime` rather than here.
     """
     if RAW.exists():
-        return pd.read_csv(RAW)
-    archived = sorted((DATA / "snapshots").glob("calpers_raw_*.csv"))
-    if not archived:
-        raise SystemExit(
-            f"{RAW} not found and no archived capture in data/snapshots/; "
-            "run: python analysis/fetch_calpers.py"
-        )
-    return pd.read_csv(archived[-1])
+        calpers = pd.read_csv(RAW)
+    else:
+        archived = sorted((DATA / "snapshots").glob("calpers_raw_*.csv"))
+        if not archived:
+            raise SystemExit(
+                f"{RAW} not found and no archived capture in data/snapshots/; "
+                "run: python analysis/fetch_calpers.py"
+            )
+        calpers = pd.read_csv(archived[-1])
+
+    oregon = pd.read_csv(resolve_snapshot(DATA, "oregon"))
+    # Oregon's own columns beyond the canonical schema (sold_secondary,
+    # fully_uncalled, reported_multiple) are kept: the secondary-sale flag
+    # decides which funds are usable and must survive the stack.
+    keep = [c for c in oregon.columns if c in set(calpers.columns) | {
+        "sold_secondary", "fully_uncalled"}]
+    return pd.concat([calpers, oregon[keep]], ignore_index=True)
 
 
 def header(text: str) -> None:
@@ -113,6 +129,12 @@ def build_regime(raw: pd.DataFrame, overrides: pd.DataFrame) -> tuple[pd.DataFra
     df["sponsor_id"] = assign_sponsor_ids(df["firm_id"])
 
     n_rows = len(df)
+    # Collapse funds both plans report, before share-class dedup. Order
+    # matters: dedup groups on (family, fund number) and sums the cash, so
+    # running it first would add CalPERS' and Oregon's stakes in the same
+    # partnership together and invent a fund twice the size.
+    df, overlap = pool_plans([df])
+    n_cross_plan = len(overlap)
     df, dedup = deduplicate_share_classes(df)
     df = add_sequence_numbers(df)
     df, _ = flag_vintage_anomalies(df)
@@ -126,6 +148,7 @@ def build_regime(raw: pd.DataFrame, overrides: pd.DataFrame) -> tuple[pd.DataFra
 
     funnel = {
         "published_rows": n_rows,
+        "cross_plan_duplicates": n_cross_plan,
         "after_share_class_dedup": len(df) + len(dedup),
         "funds_with_tvpi": len(df),
         "families": df["firm_id"].nunique(),
@@ -143,6 +166,7 @@ def irr_panel(raw: pd.DataFrame, overrides: pd.DataFrame) -> pd.DataFrame:
     df["firm_id"] = apply_firm_overrides(df["firm_id_raw"], overrides)
     df["fund_number"] = parse_fund_number(df["fund_name"])
     df["sponsor_id"] = assign_sponsor_ids(df["firm_id"])
+    df, _ = pool_plans([df])
     df, _ = deduplicate_share_classes(df)
     df = add_sequence_numbers(df)
     df, _ = flag_vintage_anomalies(df)
@@ -334,7 +358,8 @@ def main() -> None:
 
     header("Sample funnel (all merges)")
     labels = {
-        "published_rows": "rows published by CalPERS",
+        "published_rows": "rows published by both plans",
+        "cross_plan_duplicates": "funds held by both plans",
         "after_share_class_dedup": "after share-class dedup",
         "funds_with_tvpi": "funds with a computable TVPI",
         "families": "distinct fund families",
@@ -353,6 +378,19 @@ def main() -> None:
          & ~panel["not_meaningful"].fillna(False).astype(bool)).sum()
     )
     print(f"  {'mature AND adjacent (headline row)':38} {mature_adjacent:5d}")
+
+    # Written out so the funnel figure reads measured values instead of
+    # carrying a copy of them. The hardcoded version silently kept publishing
+    # the one-plan numbers after the second plan was pooled in.
+    pd.DataFrame([
+        {"step": "Published\nrows", "n": funnel["published_rows"]},
+        {"step": "After\ndedup", "n": funnel["after_share_class_dedup"]},
+        {"step": "Computable\nTVPI", "n": funnel["funds_with_tvpi"]},
+        {"step": "Families\nwith 2+", "n": funnel["families_2plus"]},
+        {"step": "Lagged\npairs", "n": funnel["lagged_pairs"]},
+        {"step": "Adjacent\npairs", "n": adjacent},
+        {"step": "Mature +\nadjacent", "n": mature_adjacent},
+    ]).to_csv(DATA / "sample_funnel.csv", index=False)
 
     # ------------------------------------------------- specification table
     header("Specification table  (y = log TVPI, SEs clustered on family)")

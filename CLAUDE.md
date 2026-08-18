@@ -22,9 +22,17 @@ family, `delta_v` a vintage fixed effect. `y` is log TVPI (or log PME). Beta
 is the object of interest: does a strong fund predict a strong successor?
 
 Standard errors cluster on family (funds of one GP share a skill component)
-and, where there are enough vintages, on vintage too. With roughly 75 families
-the cluster-robust asymptotics are borderline, so the wild cluster bootstrap
-is the primary inference — see `wild_cluster_bootstrap`.
+and, above that, on sponsor. The estimation sample is 220 pairs across 116
+families; the wild cluster bootstrap remains the primary inference, both
+because cluster sizes are lopsided and because it was load-bearing at the 39
+families the CalPERS-only version had — see `wild_cluster_bootstrap`.
+
+The headline is **beta = 0.344, 95% CI [0.168, 0.521], bootstrap p 0.004**.
+An earlier CalPERS-only version got 0.214 and could not reject zero; it also
+computed that 39 families could not detect anything below 0.435. Pooling
+Oregon raised the design to 116 families and dropped that threshold to 0.283.
+The point estimate barely moved. **That decomposition is the finding — do not
+rewrite the history so it reads as if the answer was always 0.344.**
 
 ## Repository map
 
@@ -47,10 +55,35 @@ src/pefund/
 analysis/
   fetch_calpers.py      Live CalPERS pull -> data/calpers_snapshot.csv
   fetch_oregon.py       Oregon PDF archive -> data/snapshots/
-  build_family_review.py  Family-matching worksheet -> data/family_review.csv
+  build_family_review.py  Family-matching worksheet, over BOTH plans.
+  run_real_analysis.py  The headline. Pools both plans, writes the spec table.
+  run_sample_split.py   Beta by plan and by era: is the result precision or
+                        a different population? (Answer: precision.)
+  run_overlap.py        Cross-plan measurement error, reliability ratio.
+  minimum_detectable_effect.py   Power curve on the real design matrix.
+  simulate_vintage_error.py      Sign of the vintage-mislabelling bias.
+  make_figures.py       Every figure. Reads measured values, never literals.
   run_analysis.py       Validation run on SIMULATED data.
   run_pme.py            Cash-flow reconstruction and PME on the Oregon archive.
 ```
+
+## Pooling the two plans
+
+`pool_plans` in `ingest/base.py` stacks the plans and collapses a fund both
+report, keyed on `(firm_id, fund_number)`. Three things about it are easy to
+get wrong and are pinned by tests:
+
+- It matches on family and fund number, **not fund name**. The plans spell the
+  same fund differently often enough that a name key finds no overlap at all.
+- It only collapses **across** plans. Two rows from one plan sharing a family
+  and number are share classes, and belong to `deduplicate_share_classes`,
+  which sums their cash. Collapsing them here deletes half the fund.
+- It runs **before** share-class dedup. Reversed, the two plans' stakes in one
+  partnership are summed into a fund twice the real size.
+
+The tie-break is `PLAN_PRIORITY`, fixed so the result cannot depend on concat
+order. CalPERS wins; the plans agree to 0.82% at the median, so it barely
+matters, but it is written down rather than left to row order.
 
 Note there is no `ingest/firms.py`: family matching lives in `ingest/base.py`.
 
@@ -73,7 +106,7 @@ Note there is no `ingest/firms.py`: family matching lives in `ingest/base.py`.
 
 ## Rules
 
-1. **Run `pytest -q` after every change.** 130 tests currently pass. A change
+1. **Run `pytest -q` after every change.** 232 tests currently pass. A change
    that breaks one is wrong until proven otherwise.
 2. **Do not weaken a test to make it pass.** If a test is wrong, say so and
    explain why before changing it.
@@ -122,11 +155,16 @@ analysis scripts. `firm_overrides.csv` is an input and is committed.
 
 ## Known sample problems, in priority order
 
-1. **Active partnerships only.** CalPERS drops fully exited funds, so old
-   vintages that remain are survivors in a specific, non-random sense.
-2. **Small n.** Roughly 130 lagged pairs across ~75 families. Confidence
-   intervals are wide enough to be consistent with both strong persistence and
-   none. Report the interval, do not bury it.
+1. **Active partnerships only, in CalPERS.** CalPERS drops fully exited funds,
+   so its old vintages are survivors in a specific, non-random sense. Oregon
+   does not, which is why 68 of the 69 pre-2000 funds are Oregon's. Reduced,
+   not solved.
+2. **The two plans flag maturity differently.** `not_meaningful` is each
+   plan's own judgement: CalPERS applies it to 43% of its funds, Oregon to 5%.
+   The maturity filter is therefore looser on the Oregon half. Always report
+   the unfiltered row alongside.
+3. **Power at the low end.** 116 families detect 0.283 at 80%, but only 0.13
+   at a true beta of 0.1. Nothing here rules out that persistence is small.
 3. **Unrealised marks.** Most funds in both tables are 2020s vintages carrying
    GP valuations rather than realisations. `not_meaningful` flags each plan's
    own view; specifications should be run with and without them.
@@ -152,6 +190,12 @@ python analysis/run_analysis.py          # validation on simulated data
 
 ## Not done
 
-- No real-data specification table yet; `run_analysis.py` is simulation-only.
-- No cross-plan measurement-error estimate from the CalPERS/Oregon overlap.
-- No figures, no write-up.
+- No third plan. WSIB is the obvious next one: 448 funds back to 1981, and it
+  is the only source found that publishes a **strategy field**, which would
+  remove the "cannot separate buyout from venture" limitation outright.
+  CalSTRS is a weaker add — 475 funds but a median vintage of 2017 and two
+  funds before 2000, so it is a second CalPERS.
+- The pre/post-2000 era split has only 16 pre-2000 pairs and returns a
+  nonsense beta above 1. Reported, not interpreted.
+- CalPERS' vintage definition is still unidentifiable from its published
+  pages.

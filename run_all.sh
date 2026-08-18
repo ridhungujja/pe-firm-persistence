@@ -82,6 +82,9 @@ python analysis/build_family_review.py
 step "Persistence estimates (headline output)"
 python analysis/run_real_analysis.py
 
+step "Sample splits: by plan and by era"
+python analysis/run_sample_split.py
+
 step "Family-name numeral diagnostic"
 python analysis/diagnose_numerals.py
 

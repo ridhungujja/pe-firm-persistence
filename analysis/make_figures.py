@@ -25,8 +25,8 @@ Design notes, because they were decisions rather than defaults:
     two scales were pinned. Shared x, separate panels, no inference invited.
 *   The transition heatmap is a single-hue sequential ramp with the counts
     printed in the cells. A rainbow would imply the four quartiles are
-    unordered categories, and proportions without counts are unreadable at
-    n = 47.
+    unordered categories, and proportions without counts are unreadable in
+    the smaller cells.
 """
 
 from __future__ import annotations
@@ -129,9 +129,20 @@ def figure_coefficients() -> None:
         "beta on predecessor log TVPI  (95% CI; SEs clustered on family, "
         "except row 3s on sponsor)"
     )
+    # Read the zero-crossing off the estimate rather than asserting it. This
+    # caption said "the interval includes zero" for as long as it did; when
+    # pooling the second plan moved the headline off zero the sentence became
+    # false and the figure kept publishing it.
+    head_row = table[table["specification"].str.contains(r"\[HEADLINE\]", regex=True)]
+    if head_row.empty:
+        head_row = table.iloc[[0]]
+    lo = float(head_row["ci95_low"].iloc[0])
+    hi = float(head_row["ci95_high"].iloc[0])
+    verdict = ("the interval includes zero" if lo <= 0 <= hi
+               else "the interval excludes zero")
     ax.set_title(
         "Persistence estimate across specifications\n"
-        "orange = headline (mature funds, adjacent pairs); the interval includes zero",
+        f"orange = headline (mature funds, adjacent pairs); {verdict}",
         loc="left", color=INK,
     )
     _style(ax, xgrid=True)
@@ -141,17 +152,13 @@ def figure_coefficients() -> None:
 
 
 def figure_funnel() -> None:
-    steps = [
-        ("Published\nrows", 462),
-        ("After\ndedup", 462),
-        ("Computable\nTVPI", 459),
-        ("Families\nwith 2+", 204),
-        ("Lagged\npairs", 129),
-        ("Adjacent\npairs", 100),
-        ("Mature +\nadjacent", 65),
-    ]
-    labels = [s[0] for s in steps]
-    values = [s[1] for s in steps]
+    path = DATA / "sample_funnel.csv"
+    if not path.exists():
+        print("  skipped funnel: run run_real_analysis.py first")
+        return
+    steps = pd.read_csv(path)
+    labels = list(steps["step"])
+    values = [int(v) for v in steps["n"]]
 
     fig, ax = plt.subplots(figsize=(8.6, 3.6))
     x = np.arange(len(values))
@@ -165,7 +172,11 @@ def figure_funnel() -> None:
         )
         if i:
             lost = values[i - 1] - value
-            if lost:
+            # Only label a genuine drop. The funnel changes units midway --
+            # funds up to "families with 2+", pairs after it -- so the step
+            # into "lagged pairs" counts up, and differencing across it
+            # produced a "--159" that means nothing.
+            if lost > 0:
                 # Sit each loss just above the shorter of the two bars it
                 # spans, so the labels step down with the funnel instead of
                 # floating in a row disconnected from the bars.
@@ -178,7 +189,8 @@ def figure_funnel() -> None:
     ax.set_xticklabels(labels, fontsize=8)
     ax.set_ylabel("funds / pairs")
     ax.set_title(
-        "Sample funnel: 462 published rows become 65 usable observations",
+        f"Sample funnel: {values[0]:,} published rows become "
+        f"{values[-1]:,} usable observations",
         loc="left", color=INK,
     )
     _style(ax, ygrid=True)
@@ -188,7 +200,13 @@ def figure_funnel() -> None:
 
 
 def figure_vintage_coverage() -> None:
-    df = pd.read_csv(resolve_snapshot(DATA, "calpers"))
+    # Both plans. CalPERS alone starts at 1998 and has one fund before 2000,
+    # so a CalPERS-only version of this panel hides the entire realised half
+    # of the sample.
+    df = pd.concat(
+        [pd.read_csv(resolve_snapshot(DATA, prefix)) for prefix in ("calpers", "oregon")],
+        ignore_index=True,
+    )
     df["tvpi"] = df["total_value"] / df["contributions"]
     df["unrealised"] = df["nav"] / df["total_value"].replace(0, np.nan)
     by = df.groupby("vintage").agg(
