@@ -135,8 +135,9 @@ pass.
 re-download both plans. Do that only if you want fresher data, and expect the
 numbers to move, because Oregon's archive will have shifted.
 
-The whole run takes a few minutes. Most of that is two simulation studies:
-the power calculation and a check on vintage-year errors.
+The whole run takes about eighty seconds, measured on a fresh clone. Most of
+that is two simulation studies: the power calculation and a check on
+vintage-year errors.
 
 ## What you get
 
@@ -163,7 +164,7 @@ analysis/                   one script per output
 
 ## How much you can trust it
 
-I checked the estimate six ways. None of them overturned it.
+I checked the estimate seven ways. None of them overturned it.
 
 **The estimator recovers a known answer.** I simulate fund histories with a
 persistence I choose myself, then run the real estimation code on them. Across
@@ -211,9 +212,10 @@ relationship is a straight line.
 **The quartile table says the same thing without any model.** Sort funds into
 four buckets by how they did against funds started the same year, then ask
 where the next fund lands. A bottom-quartile fund is followed by another
-bottom-quartile fund 45% of the time, against 25% if it were random. A
-top-quartile fund is followed by another top-quartile fund 47% of the time. Over
-205 pairs the odds of that pattern arising by chance are 1 in 10,000.
+bottom-quartile fund 43% of the time, against 25% if it were random. A
+top-quartile fund is followed by another top-quartile fund 46% of the time.
+Across all four buckets the fund stays put 38% of the time against 26% under
+chance, and over 205 pairs a permutation test puts that at p = 0.0001.
 
 **Reporting error is small.** 43 funds appear in both plans on the same
 reporting date. That is two independent readings of the same fund. Seven of

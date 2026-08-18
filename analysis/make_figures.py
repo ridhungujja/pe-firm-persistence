@@ -214,7 +214,11 @@ def figure_vintage_coverage() -> None:
         median_tvpi=("tvpi", "median"),
         unrealised=("unrealised", "median"),
     )
-    by = by[by.index >= 1998]
+    # No lower cutoff. There was a `>= 1998` here from when CalPERS was the
+    # only source and 1998 was its first vintage; kept after Oregon was pooled
+    # in, it silently dropped all 68 pre-2000 funds -- the entire realised half
+    # of the sample, and the reason for adding the second plan.
+    by = by[by.index.notna()]
 
     # Two panels rather than a twin axis: fund count and TVPI have unrelated
     # scales, and a shared axis invites a reading of "crossing" that would be
@@ -230,8 +234,10 @@ def figure_vintage_coverage() -> None:
             color=AQUA, zorder=4, label="unrealised share of value (shaded)")
     top.set_ylabel("funds")
     top.legend(frameon=False, fontsize=7.5, loc="upper left")
+    span = f"{int(by.index.min())}-{int(by.index.max())}"
     top.set_title(
-        "Vintage coverage: the sample is dominated by young, unrealised funds",
+        f"Vintage coverage, {span}: old funds are realised, recent ones are "
+        "still marks",
         loc="left", color=INK,
     )
     _style(top, ygrid=True)
@@ -284,9 +290,16 @@ def figure_transition_heatmap() -> None:
     ax.set_yticks(range(matrix.shape[0]), [f"Q{int(float(i))}" for i in counts.index])
     ax.set_xlabel("successor quartile")
     ax.set_ylabel("predecessor quartile")
+    # Read from the test output rather than restating it. This subtitle sat at
+    # "p = 0.089" from the one-plan run while the cells below it updated.
+    test = pd.read_csv(DATA / "transition_test.csv").iloc[0]
+    caption_obs = float(test["observed_diagonal_share"])
+    caption_null = float(test["null_mean"])
+    caption_p = float(test["p_value"])
     ax.set_title(
         "Quartile transitions, mature adjacent pairs\n"
-        "diagonal 36% vs 26% under the within-vintage null (p = 0.089)",
+        f"diagonal {caption_obs:.0%} vs {caption_null:.0%} under the "
+        f"within-vintage null (p = {caption_p:.4f})",
         loc="left", color=INK, fontsize=9.5,
     )
     for spine in ax.spines.values():

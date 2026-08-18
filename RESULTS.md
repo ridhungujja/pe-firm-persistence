@@ -208,8 +208,8 @@ regression coefficient, and invariant to any monotone transform of TVPI.
 **The quartile transition matrix now agrees.** Over 205 mature adjacent pairs
 the diagonal holds 38.1% of the mass against a within-vintage permutation null
 of 25.6%, p = 0.0001. The corners are where the mass is: a bottom-quartile fund
-is followed by another bottom-quartile fund 45% of the time, a top-quartile
-fund by another top-quartile fund 47%. In the one-plan version this was the
+is followed by another bottom-quartile fund 43% of the time, a top-quartile
+fund by another top-quartile fund 46%. In the one-plan version this was the
 single suggestive result at p = 0.089; it is now the clearest one, and it is
 non-parametric.
 
