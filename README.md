@@ -256,6 +256,17 @@ first instinct.
 
 ## Limitations
 
+**This is not the question an investor actually faces.** I relate a fund's
+return to its predecessor's return *as reported today*. But when the successor
+was being raised, the predecessor was only part-way through its life and its
+number then was different. Harris, Jenkinson, Kaplan and Stucke show that this
+swap is what matters: using final performance they confirm persistence after
+2000, and using the interim number an investor would actually have seen, it
+mostly goes away for buyout funds. Neither plan publishes a fund's performance
+history, only the current quarter, so I cannot build that version. This is the
+biggest caveat on the whole result. It is the right number for "does skill
+persist" and the wrong number for "should I put money in fund IX".
+
 **The sample is still small in absolute terms.** 220 pairs, 116 families. Big
 enough to detect a beta of 0.283 four times in five, which is why the result
 exists. Not big enough to settle the low end: at a true beta of 0.1 this study
@@ -336,6 +347,9 @@ Papers this project leans on:
   Persistence, and Capital Flows." *Journal of Finance* 60 (4).
 - Harris, R., Jenkinson, T. and Kaplan, S. 2014. "Private Equity Performance:
   What Do We Know?" *Journal of Finance* 69 (5).
+- Harris, R., Jenkinson, T., Kaplan, S. and Stucke, R. 2020. "Has Persistence
+  Persisted in Private Equity? Evidence from Buyout and Venture Capital Funds."
+  Becker Friedman Institute working paper 2020-167.
 - Braun, R., Jenkinson, T. and Stoff, I. 2017. "How Persistent is Private
   Equity Performance?" *Journal of Financial Economics* 123 (2).
 - Korteweg, A. and Nagel, S. 2016. "Risk-Adjusting the Returns to Venture

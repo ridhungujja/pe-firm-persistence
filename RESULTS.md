@@ -155,15 +155,33 @@ because leaving it out would be selective. The useful reading is that the
 pre-2000 subsample is too small to test the era hypothesis, not that
 persistence was explosive.
 
-**No evidence that persistence disappeared after 2000.** Post-2000 gives 0.308
-and post-2010 gives 0.385, both comfortably off zero. That runs against Harris,
-Jenkinson and Kaplan (2014) and Braun, Jenkinson and Stoff (2017), who report
-post-2000 persistence well below 0.15. Three cautions before treating this as a
-contradiction. The sample is two LPs' holdings, not the universe. Most post-2010
-funds are still carrying unrealised marks, and marks are smoothed toward the
-manager's own prior fund. And this design has power of only 0.13 at β = 0.1, so
-it can detect the 0.3 it found but could not have distinguished a true 0.1 from
-zero — it does not have the resolution to adjudicate the low end.
+**Post-2000 persistence is intact here, and that agrees with the literature
+rather than contradicting it.** Post-2000 gives 0.308 and post-2010 gives 0.385,
+both comfortably off zero.
+
+That needs care, because "persistence died after 2000" is the usual summary of
+the modern literature and it is a summary of the wrong specification. Harris,
+Jenkinson, Kaplan and Stucke (2020) draw the distinction that matters. Using
+**ex post performance** — the predecessor's return as measured today — they
+write that they "confirm the previous findings on persistence overall as well
+as for pre-2001 and post-2000 funds". Using instead the predecessor's
+**interim performance as it stood when the successor was being marketed**, they
+find little or no persistence for buyouts. Their post-2000 buyout regression on
+previous-fund PME at fundraising gives a coefficient of 0.194, or 0.173 with
+controls, which they call economically modest.
+
+**This study estimates the ex post version.** Both plans publish the
+predecessor's performance as of the current quarter, not as of the date the
+successor closed, so the at-fundraising specification cannot be run on this
+data at all. So 0.308 post-2000 belongs beside the finding HJKS confirm, not
+beside the one they overturn, and it should not be read as evidence against
+them.
+
+Three further cautions. The sample is two LPs' holdings, not the universe. Most
+post-2010 funds still carry unrealised marks, and a manager valuing a live fund
+has the prior fund's record in view. And this design has power of only 0.13 at
+β = 0.1, so it can detect the 0.3 it found but could not distinguish a true 0.1
+from zero — it does not have the resolution to adjudicate the low end.
 
 ## Inference
 
@@ -284,12 +302,33 @@ MDE of 0.283, and roughly 93% power at the coefficient it estimates. The null
 did not survive. **The earlier null was a statement about the sample, and it
 correctly said so at the time.**
 
-One limit is unchanged. At β = 0.1 — the magnitude the post-2000 literature
-reports — power is still only 0.13. This design can detect persistence of
-Kaplan-Schoar magnitude and now does. It still cannot distinguish a small true
-effect from no effect, and no conclusion here should be read as ruling one out.
+One correction to that quotation, since it is reproduced here rather than
+quietly reworded: its second clause rested on a misreading of the modern
+literature. The post-2000 papers do not report near-zero persistence in the
+specification this study runs; they report it in the at-fundraising
+specification this study cannot run. The first clause — that 39 clusters could
+not detect a Kaplan-Schoar-magnitude effect — is the part that was right, and
+it is the part the new sample tested.
+
+One limit is unchanged. At β = 0.1 power is still only 0.13, and at 0.2 it is
+0.45. The coefficient HJKS report for the investable, at-fundraising
+specification is 0.194 — squarely in the range this design would miss more
+often than not. So even with 116 families, this study can speak to ex post
+persistence and cannot speak to the version an investor could act on. That is a
+limit of the design and of the data, not a finding.
 
 ## Limitations
+
+**This measures ex post persistence, not what an investor could act on.**
+β relates the successor's return to the predecessor's return *as reported
+today*. When the successor was actually being raised, the predecessor was
+part-way through its life and its interim number was different — and Harris,
+Jenkinson, Kaplan and Stucke (2020) show that swapping final for interim
+performance is what kills persistence for post-2000 buyouts. Neither plan
+publishes a historical performance series per fund, only the current quarter,
+so the investable specification cannot be constructed here. This is the single
+largest qualification on the headline: it is the right coefficient for "does
+skill persist" and the wrong one for "should I back fund IX".
 
 **Survivorship, reduced but not removed.** CalPERS drops fully exited funds, so
 its old vintages are survivors in a specific, non-random sense. Oregon does not,

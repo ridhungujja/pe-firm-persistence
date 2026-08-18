@@ -418,3 +418,43 @@ series VIII through XI, and GGV's four "Plus" funds.
   nonsense. Reported so the omission is not selective, not interpreted.
 - The two plans' "not meaningful" flags are not a common rule (43% against 5%),
   so the maturity filter is asymmetric across the pooled sample.
+
+## Checking the literature claims, and finding one of them wrong
+
+The write-up asserted that Kaplan and Schoar found betas of 0.4-0.6 before 2000
+and that the modern literature finds "well under 0.15" after. Those numbers had
+been carried since the first draft without being checked against the papers.
+They are load-bearing: the entire minimum-detectable-effect argument is framed
+against them. Checked them.
+
+**The post-2000 claim was wrong, and wrong in the direction that mattered.**
+Harris, Jenkinson, Kaplan and Stucke (2020) separate two specifications that
+the write-up had run together:
+
+- Regressing the successor on the predecessor's **ex post** performance — its
+  return as measured today — they "confirm the previous findings on persistence
+  overall as well as for pre-2001 and post-2000 funds".
+- Regressing on the predecessor's **interim** performance as it stood when the
+  successor was being marketed, they find little or no persistence for buyouts.
+  Their post-2000 buyout regression on previous-fund PME at fundraising gives
+  0.194, or 0.173 with controls.
+
+"Persistence died after 2000" summarises the second specification. This study
+runs the first: both plans publish the predecessor's performance as of the
+current quarter, never as of the successor's close date, so the at-fundraising
+version cannot be constructed from this data at all.
+
+So the post-2000 estimate of 0.308 was being presented as a challenge to the
+literature when it is a replication of the half of it that holds. That framing
+is now corrected in `RESULTS.md`, and the ex post / at-fundraising distinction
+is the first limitation listed in both write-ups rather than an afterthought.
+
+Two smaller corrections came with it. The persistence-decline finding was cited
+to Harris, Jenkinson and Kaplan (2014), which is about performance levels
+against the S&P 500 rather than persistence; the persistence paper is Harris,
+Jenkinson, Kaplan and Stucke. And "well under 0.15" was too low even for the
+at-fundraising specification, where the reported coefficient is 0.194.
+
+**Still unverified:** the Kaplan-Schoar 0.4-0.6 range, and the Braun, Jenkinson
+and Stoff coefficients. Both are quoted from secondary summaries. They should be
+read in the published papers before either is relied on further.
