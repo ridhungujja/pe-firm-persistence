@@ -377,13 +377,31 @@ implausible.
 
 ### Figures were publishing stale literals
 
-Two figures asserted numbers rather than reading them. `coefficients.png`
-carried the subtitle "the interval includes zero", which stayed on the chart
-after the interval stopped including zero. `sample_funnel.png` had all seven
-funnel counts hardcoded at their one-plan values. Both now read the measured
-tables. The funnel also changes units midway — funds up to "families with 2+",
-pairs after — so differencing across that step printed a meaningless negative
-loss; it is suppressed.
+Four figures asserted numbers rather than reading them, all of them literals
+left over from the CalPERS-only run.
+
+`coefficients.png` carried the subtitle "the interval includes zero", which
+stayed on the chart after the interval stopped including zero.
+`transition_heatmap.png` printed "p = 0.089" above cells that had already
+updated to the pooled counts. `sample_funnel.png` had all seven funnel counts
+hardcoded at their one-plan values. And `figure_vintage_coverage` filtered to
+`vintage >= 1998`, which was CalPERS' first vintage and meant nothing once
+Oregon was pooled in; it removed the 44 funds started before 1998 and 14 of the
+43 vintage years on the chart. Few funds, but the oldest in the data and the
+only ones far enough along to have realised what they bought — which is the
+reason for adding the second plan at all. All four now read the measured
+tables.
+
+The funnel also changes units midway — funds up to "families with 2+", pairs
+after — so differencing across that step printed a meaningless negative loss;
+it is suppressed.
+
+The commit that fixed these described the filter as dropping "every pre-2000
+fund", and a code comment put the count at 68. Both were wrong: `>= 1998`
+keeps 1998 and 1999, so the cut is at 1997 and the count is 44. 68 is the
+number of pre-2000 funds in the sample, which is a different quantity that
+happens to sit nearby. The comment is corrected; the commit message is left as
+published rather than rewriting history that is already public.
 
 ### Family matching, second pass
 

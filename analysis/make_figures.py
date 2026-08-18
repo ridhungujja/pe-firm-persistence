@@ -215,9 +215,11 @@ def figure_vintage_coverage() -> None:
         unrealised=("unrealised", "median"),
     )
     # No lower cutoff. There was a `>= 1998` here from when CalPERS was the
-    # only source and 1998 was its first vintage; kept after Oregon was pooled
-    # in, it silently dropped all 68 pre-2000 funds -- the entire realised half
-    # of the sample, and the reason for adding the second plan.
+    # only source and 1998 was its first vintage. Kept after Oregon was pooled
+    # in, it dropped the 44 funds started before 1998 and 14 of the 43 vintage
+    # years on the chart -- few funds, but the oldest ones in the data and the
+    # only ones far enough along to have realised what they bought, which is
+    # the reason for adding the second plan in the first place.
     by = by[by.index.notna()]
 
     # Two panels rather than a twin axis: fund count and TVPI have unrelated
